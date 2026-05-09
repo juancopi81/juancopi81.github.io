@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Juan Piñeros</title>
+  <title>Juan Carlos</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -16,45 +16,74 @@
         <a href="about.html">About</a>
       </nav>
 
-      <h1>Juan Piñeros</h1>
+      <h1>Juan Carlos</h1>
       <p class="subtitle">
-        Senior ML engineer focused on applied machine learning, generative models,
-        and research-to-production systems.
+        I’m Juan Carlos, a Senior ML Engineer at
+        <a href="https://www.marvik.ai/">Marvik</a>. I build applied machine
+        learning and generative AI systems, with a focus on moving research
+        ideas into products people can use.
       </p>
+      <p>
+        I studied music before working in AI, and I still think a lot about
+        creative tools: what happens when machines can compose, generate,
+        search, and collaborate with us.
+      </p>
+      <div class="actions">
+        <a class="button" href="projects.html">Projects</a>
+        <a class="button secondary" href="about.html">About</a>
+      </div>
     </header>
 
     <section>
       <h2>Selected Projects</h2>
 
       <article class="card">
-        <h3>Diffusion from First Principles</h3>
-        <p>
-          Personal research notebook rebuilding diffusion models from probability,
-          scores, conditioning, DDPMs, SDEs, and flow matching.
-        </p>
-        <p class="muted">Coming soon</p>
-      </article>
-
-      <article class="card">
+        <p class="eyebrow">Video search</p>
         <h3>Video Moment Finder</h3>
         <p>
-          Semantic and transcript-aware video moment search for creators and researchers.
-          Users can search inside videos by text or image and jump directly to relevant timestamps.
+          Semantic and transcript-aware video search for finding exact moments
+          inside long videos. Search with text or images, then jump straight to
+          the relevant timestamp.
         </p>
         <a href="https://github.com/juancopi81/video-moment-finder">View repo</a>
       </article>
+
+      <article class="card">
+        <p class="eyebrow">Music AI</p>
+        <h3>Multitrack MIDI Music Generator</h3>
+        <p>
+          A Hugging Face Space for generating multitrack MIDI by genre, built from
+          symbolic-music experiments with custom datasets, tokenization, and model
+          fine-tuning.
+        </p>
+        <a href="https://huggingface.co/spaces/juancopi81/multitrack-midi-music-generator">Open demo</a>
+      </article>
+
+      <article class="card">
+        <p class="eyebrow">Research notes</p>
+        <h3>Diffusion from First Principles</h3>
+        <p>
+          A 52-week research curriculum rebuilding diffusion models from
+          probability foundations through score-based models, SDEs, and flow
+          matching.
+        </p>
+        <a href="https://github.com/juancopi81/diffusion-research-curriculum">View repo</a>
+      </article>
+
+      <p class="section-link"><a href="projects.html">See all projects</a></p>
     </section>
 
     <section>
       <h2>Writing</h2>
 
       <article class="card">
-        <h3>The Score Function Finally Clicked</h3>
+        <p class="eyebrow">Tutorial</p>
+        <h3>Using Hugging Face to Train a GPT-2 Model for Music Generation</h3>
         <p>
-          A short milestone note on understanding the score function as a direction
-          toward higher probability density.
+          A walkthrough for building a symbolic-music generation workflow with a
+          custom dataset, tokenizer, GPT-2 training loop, and interactive demo.
         </p>
-        <p class="muted">Drafting soon</p>
+        <a href="https://huggingface.co/blog/juancopi81/using-hugging-face-to-train-a-gpt-2-model-for-musi">Read article</a>
       </article>
     </section>
   </main>

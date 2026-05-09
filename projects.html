@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Projects | Juan Piñeros</title>
+  <title>Projects | Juan Carlos</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -16,23 +16,133 @@
     </nav>
 
     <h1>Projects</h1>
+    <p class="subtitle">
+      Selected personal projects, public experiments, and research notes across
+      video, speech, retrieval, and music generation. Professional client and
+      company work is not included here.
+    </p>
 
     <article class="card">
-      <h2>Diffusion from First Principles</h2>
+      <p class="eyebrow">Video search</p>
+      <h2>Video Moment Finder</h2>
       <p>
-        Personal research notebook rebuilding diffusion models from probability,
-        scores, conditioning, DDPMs, SDEs, and flow matching.
+        Open-source video search that combines transcript retrieval and visual
+        embeddings so creators, researchers, and builders can find exact moments
+        inside long videos.
       </p>
-      <p class="muted">Coming soon</p>
+      <p class="muted">React, Python, Node.js, semantic search</p>
+      <div class="links">
+        <a href="https://github.com/juancopi81/video-moment-finder">GitHub</a>
+        <a href="https://peerlist.io/juancopi/project/video-moment-finder">Peerlist</a>
+      </div>
     </article>
 
     <article class="card">
-      <h2>Video Moment Finder</h2>
+      <p class="eyebrow">Music AI</p>
+      <h2>Komposair</h2>
       <p>
-        Semantic and transcript-aware video moment search for creators and researchers.
-        The system combines visual embeddings and transcript search to find exact moments inside video.
+        My first AI music project, built in 2020 before the current generative
+        AI wave. Musicians enter a motif, then generate, save, and explore
+        melodies using Magenta RNN models and custom Keras LSTM folk-song
+        models.
       </p>
-      <a href="https://github.com/juancopi81/video-moment-finder">View repo</a>
+      <p class="muted">Django, TensorFlow, Magenta.js, Tone.js, VexFlow</p>
+      <div class="links">
+        <a href="https://www.komposair.com/">Live site</a>
+        <a href="https://www.komposair.com/models">Models</a>
+        <a href="https://github.com/juancopi81/komposair">GitHub</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <p class="eyebrow">Music preservation</p>
+      <h2>score2abc</h2>
+      <p>
+        A pipeline for converting handwritten Colombian music scores into ABC
+        notation and metadata, with PDF rendering, staff segmentation,
+        MusicXML/ABC export, QA, and evaluation artifacts.
+      </p>
+      <p class="muted">Python, OMR adapters, ABC notation, preservation</p>
+      <a href="https://github.com/juancopi81/score2abc">View repo</a>
+    </article>
+
+    <article class="card">
+      <p class="eyebrow">Forecasting agents</p>
+      <h2>Colombia Forecasting Desk</h2>
+      <p>
+        An experimental agent-assisted forecasting desk for Colombian political,
+        economic, regulatory, and institutional events. It scans public sources,
+        cleans and clusters items, tracks indicators, and produces daily
+        forecast-candidate briefs.
+      </p>
+      <p class="muted">Python, public-source monitoring, forecasting workflows</p>
+      <a href="https://github.com/juancopi81/colombia-forecasting-desk">View repo</a>
+    </article>
+
+    <article class="card">
+      <p class="eyebrow">Image AI</p>
+      <h2>WhatsApp Image Bot</h2>
+      <p>
+        A FastAPI-powered WhatsApp bot for background and object removal,
+        designed for online sellers and content creators. It connects Twilio,
+        external AI image-processing APIs, cloud storage, and a commercial MVP
+        direction around credits and payments.
+      </p>
+      <p class="muted">FastAPI, Twilio, fal.ai, AWS S3, Docker</p>
+      <a href="https://github.com/juancopi81/whatsapp-image-bot">View repo</a>
+    </article>
+
+    <article class="card">
+      <p class="eyebrow">Music AI</p>
+      <h2>Multitrack MIDI Music Generator</h2>
+      <p>
+        Interactive Hugging Face Space for generating multitrack MIDI by genre.
+        The project turns symbolic music into model-friendly text, fine-tunes
+        sequence models, and exposes the results through a playable demo.
+      </p>
+      <p class="muted">Hugging Face Spaces, Transformers, symbolic music</p>
+      <div class="links">
+        <a href="https://huggingface.co/spaces/juancopi81/multitrack-midi-music-generator">Open demo</a>
+        <a href="https://huggingface.co/blog/juancopi81/using-hugging-face-to-train-a-gpt-2-model-for-musi">Read write-up</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <p class="eyebrow">Speech</p>
+      <h2>Spanish Whisper Fine-Tuning</h2>
+      <p>
+        A set of Whisper fine-tuning experiments for Spanish automatic speech
+        recognition, including Common Voice and FLEURS-style training runs.
+      </p>
+      <p class="muted">Whisper, ASR, Spanish speech datasets</p>
+      <div class="links">
+        <a href="https://huggingface.co/juancopi81/whisper-medium-es-common-fleurs-5k-10k">View model</a>
+        <a href="https://huggingface.co/juancopi81/models">More models</a>
+      </div>
+    </article>
+
+    <article class="card">
+      <p class="eyebrow">Dataset</p>
+      <h2>LMD Clean 8-Bar Dataset</h2>
+      <p>
+        A cleaned version of the Lakh MIDI Dataset prepared for symbolic-music
+        generation research, with 8-bar examples and train, validation, and test
+        splits for model development.
+      </p>
+      <p class="muted">345k rows, Parquet, Hugging Face Datasets</p>
+      <a href="https://huggingface.co/datasets/juancopi81/lmd_clean_8bars_32th_resolution">View dataset</a>
+    </article>
+
+    <article class="card">
+      <p class="eyebrow">Research notes</p>
+      <h2>Diffusion from First Principles</h2>
+      <p>
+        A 52-week research curriculum that rebuilds diffusion models from
+        probability foundations to diffusion, score-based models, SDEs, and flow
+        matching, with notes, proofs, notebooks, and mini-projects.
+      </p>
+      <p class="muted">Probability foundations, diffusion, SDEs, flow matching</p>
+      <a href="https://github.com/juancopi81/diffusion-research-curriculum">View repo</a>
     </article>
   </main>
 </body>
