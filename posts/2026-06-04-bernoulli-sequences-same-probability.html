@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      Sequences of Bernoulli Outcomes with the Same Probability | Juan Carlos
+    </title>
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["\\[", "\\]"]],
+        },
+        svg: {
+          fontCache: "global",
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  </head>
+  <body>
+    <main class="page post-page">
+      <nav class="nav post-nav-top">
+        <a href="../index.html">Home</a>
+        <a href="../projects.html">Projects</a>
+        <a href="../writing.html">Writing</a>
+        <a href="../about.html">About</a>
+      </nav>
+
+      <article class="post-content math-note">
+        <header class="post-header">
+          <p class="eyebrow">Research Log</p>
+          <h1>Sequences of Bernoulli Outcomes with the Same Probability</h1>
+          <p class="post-meta">June 4, 2026 · Probability · Bernoulli trials</p>
+        </header>
+
+        <section class="post-section">
+          <h2>The Question</h2>
+          <p>
+            There are many possible success-failure sequences in an i.i.d.
+            (independent and identically distributed) Bernoulli experiment with
+            \(n\) trials and \(k\) successes.
+          </p>
+          <ul class="question-list">
+            <li>
+              Do sequences with exactly \(k\) successes have the same
+              conditional probability once we know \(X = k\)?
+            </li>
+            <li>
+              Does the common success probability \(p\) affect that conditional
+              probability?
+            </li>
+          </ul>
+          <p>
+            Short answer: yes, in the i.i.d. case, all compatible sequences are
+            equally likely after conditioning on \(X = k\). Each one has
+            conditional probability \(1 / \binom{n}{k}\), and the value of
+            \(p\) cancels out as long as \(P(X = k) &gt; 0\).
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Why I Care</h2>
+          <p>
+            Prof. Blitzstein says that
+            <em>"conditioning is the soul of statistics."</em>
+            At least to me, that sentence can feel vague until you see
+            conditioning in action. This problem helps with that: the key
+            insight is to condition on \(X = k\), which lets us simplify the
+            math, as we will see.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Setup and Definitions</h2>
+          <p>The conditional probability rule is:</p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            P(A \mid B) &= \frac{P(A, B)}{P(B)} \\
+            &= \frac{P(A \cap B)}{P(B)}
+            \end{aligned}
+            \]
+          </div>
+
+          <p>
+            Let \(X_i \in \{0, 1\}\) indicate whether trial \(i\) is a success
+            or failure. Then:
+          </p>
+
+          <div class="math-block">
+            \[
+            X = X_1 + X_2 + \cdots + X_n
+            \]
+          </div>
+
+          <p>
+            So \(X\) is the total number of successes. If
+            \(X \sim \mathrm{Bin}(n, p)\), then:
+          </p>
+
+          <div class="math-block">
+            \[
+            P(X = k) = \binom{n}{k}p^k q^{n-k}, \quad q = 1 - p
+            \]
+          </div>
+
+          <p>
+            Concrete example: if we throw a coin 5 times and get 2 tails, there
+            are many ways to get 2 tails. If we treat tails as success, then
+            examples include <code>TTHHH</code> and <code>THHHT</code>.
+          </p>
+          <ul class="question-list">
+            <li>Do all these ways have equal probability?</li>
+            <li>Does this depend on whether or not the coin is fair?</li>
+          </ul>
+        </section>
+
+        <section class="post-section">
+          <h2>Minimal Derivation</h2>
+          <p>
+            Fix \(k\) and take any sequence \((a_1, \ldots, a_n)\) where each
+            \(a_i\) is either \(0\) or \(1\), and:
+          </p>
+
+          <div class="math-block">
+            \[
+            a_1 + \cdots + a_n = k
+            \]
+          </div>
+
+          <p>We want to compute:</p>
+
+          <div class="math-block">
+            \[
+            P(X_1 = a_1, \ldots, X_n = a_n \mid X = k)
+            \]
+          </div>
+
+          <p>By the definition of conditional probability:</p>
+
+          <div class="math-block">
+            \[
+            P(X_1 = a_1, \ldots, X_n = a_n \mid X = k)
+            =
+            \frac{
+              P(X_1 = a_1, \ldots, X_n = a_n, X = k)
+            }{
+              P(X = k)
+            }
+            \]
+          </div>
+
+          <p>
+            The key insight is that the event
+            \(\{X_1 = a_1, \ldots, X_n = a_n\}\) already implies
+            \(\{X = k\}\), because \(a_1 + \cdots + a_n = k\). So we can
+            simplify the numerator and get rid of the annoying condition:
+          </p>
+
+          <div class="math-block">
+            \[
+            P(X_1 = a_1, \ldots, X_n = a_n, X = k)
+            =
+            P(X_1 = a_1, \ldots, X_n = a_n)
+            \]
+          </div>
+
+          <p>By independence:</p>
+
+          <div class="math-block">
+            \[
+            P(X_1 = a_1, \ldots, X_n = a_n) = p^k q^{n-k}
+            \]
+          </div>
+
+          <p>The binomial probability is:</p>
+
+          <div class="math-block">
+            \[
+            P(X = k) = \binom{n}{k}p^k q^{n-k}
+            \]
+          </div>
+
+          <p>Therefore:</p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            P(X_1 = a_1, \ldots, X_n = a_n \mid X = k)
+            &= \frac{p^k q^{n-k}}{\binom{n}{k}p^k q^{n-k}} \\
+            &= \frac{1}{\binom{n}{k}}
+            \end{aligned}
+            \]
+          </div>
+
+          <p>
+            This does not depend on the particular sequence
+            \((a_1, \ldots, a_n)\), so all sequences with exactly \(k\)
+            successes are equally likely once we condition on \(X = k\). It also
+            does not depend on \(p\), as long as \(P(X = k) &gt; 0\).
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>What I Think I Learned</h2>
+          <p>
+            If event \(A\) already implies event \(B\), then the event
+            \(A \cap B\) is really just the event \(A\). In that case:
+          </p>
+
+          <div class="math-block">
+            \[
+            P(A \cap B) = P(A)
+            \]
+          </div>
+
+          <p>
+            So conditioning on \(B\) does not add a new restriction to \(A\);
+            it only changes the denominator:
+          </p>
+
+          <div class="math-block">
+            \[
+            P(A \mid B) = \frac{P(A)}{P(B)}
+            \]
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>Open Questions</h2>
+          <ul>
+            <li>
+              What changes if the Bernoulli trials are independent but have
+              different probabilities?
+            </li>
+            <li>What changes if the trials are not independent?</li>
+            <li>
+              How often does this "the event already implies the condition"
+              trick appear in other probability problems?
+            </li>
+          </ul>
+        </section>
+
+        <section class="post-section">
+          <h2>References</h2>
+          <ul class="references">
+            <li>
+              <a href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/proofs/w01_stat110_rvs.md">My Stat 110 random variables notes</a>
+            </li>
+            <li>
+              <a href="https://stat110.hsites.harvard.edu/sites/g/files/omnuum10111/files/stat110/files/strategic_practice_and_homework_3.pdf">Stat 110 Strategic Practice and Homework 3</a>
+            </li>
+          </ul>
+        </section>
+      </article>
+
+      <p class="post-nav"><a href="../writing.html">Back to writing</a></p>
+
+      <footer class="footer">
+        <p>Find me online or get in touch.</p>
+        <div class="links">
+          <a href="https://github.com/juancopi81">GitHub</a>
+          <a href="https://huggingface.co/juancopi81">Hugging Face</a>
+          <a href="https://www.linkedin.com/in/juancarlospinerosp/">LinkedIn</a>
+          <a href="https://x.com/juancopi81">X / Twitter</a>
+          <a href="mailto:juancopi_81@hotmail.com">Email</a>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>
