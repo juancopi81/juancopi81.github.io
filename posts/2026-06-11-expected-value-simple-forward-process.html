@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expected Value of a Simple Forward Process | Juan Carlos</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["\\[", "\\]"]],
+        },
+        svg: {
+          fontCache: "global",
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  </head>
+  <body>
+    <main class="page post-page">
+      <nav class="nav post-nav-top">
+        <a href="../index.html">Home</a>
+        <a href="../projects.html">Projects</a>
+        <a href="../writing.html">Writing</a>
+        <a href="../about.html">About</a>
+      </nav>
+
+      <article class="post-content math-note">
+        <header class="post-header">
+          <p class="eyebrow">Research Log</p>
+          <h1>Expected Value of a Simple Forward Process</h1>
+          <p class="post-meta">June 11, 2026 · Diffusion · Expectation</p>
+        </header>
+
+        <section class="post-section">
+          <h2>The Question</h2>
+          <p>
+            Why does adding Gaussian noise to the same image many times leave
+            it unchanged on average?
+          </p>
+          <p>
+            What does that even mean?
+          </p>
+          <p>
+            This does not mean that one noisy image is unchanged. It means the
+            distribution of noisy images is centered around the original image.
+          </p>
+          <p>
+            Short answer: intuitively, the noise added in multiple experiments
+            will cancel out with the noise from the other experiments, but let's
+            unpack this.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Why I Care</h2>
+          <p>
+            One of the building blocks of diffusion models is the so-called
+            forward process, in which we corrupt "clean" data, like images, by
+            adding Gaussian noise. The goal here is to learn how to undo the
+            corruption process, and hence generate images from noise.
+            Brilliant!
+          </p>
+          <p>
+            I think these kinds of concepts really click once you have both the
+            right intuition and the math/derivation understanding. They work in
+            tandem, and usually one helps the other.
+          </p>
+          <p>
+            Taking this into account, let's see one of the properties, the
+            expected value, of a simplified forward process.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Setup and Definitions</h2>
+          <p>
+            For concreteness, imagine that you take an image of your cat,
+            \(x_0\). Then you generate random Gaussian noise with the same shape
+            as your image, \(\varepsilon \sim \mathcal{N}(0, I)\). Finally, you
+            take your original image and add the noise, scaled by a factor
+            \(\sigma\).
+          </p>
+          <p>
+            Here \(\sigma\) is the noise level: how strong you want the noise to
+            be. For example, if a pixel's noise value is \(1.3\), but
+            \(\sigma = 0.1\), your final pixel increases by \(0.13\). Then you
+            save the output of this operation in \(x_t\).
+          </p>
+          <p>
+            Side note: for simplicity, let's not worry about image clipping or
+            any other practical consideration that appears in a real-world
+            scenario.
+          </p>
+          <p>
+            Congratulations, you just implemented a toy version of a forward
+            diffusion process:
+          </p>
+
+          <div class="math-block">
+            \[
+            x_t = x_0 + \sigma \varepsilon,
+            \qquad
+            \varepsilon \sim \mathcal{N}(0, I)
+            \]
+          </div>
+
+          <p>
+            Equivalently, conditioned on the original image, the noisy image is
+            distributed as:
+          </p>
+
+          <div class="math-block">
+            \[
+            x_t \mid x_0 \sim \mathcal{N}(x_0, \sigma^2 I)
+            \]
+          </div>
+
+          <p>
+            So \(x_0\) is the center of the noisy-image distribution.
+          </p>
+
+          <p>
+            Now imagine you run this experiment a bunch of times. You'll get
+            many different noisy images:
+          </p>
+
+          <div class="math-block">
+            \[
+            x_t^{(1)}, x_t^{(2)}, \ldots, x_t^{(M)}
+            \]
+          </div>
+
+          <p>
+            What would you imagine happens if you take the average of your
+            \(x_t\)'s?
+          </p>
+
+          <div class="math-block">
+            \[
+            \frac{1}{M}\sum_{m=1}^{M} x_t^{(m)}
+            \]
+          </div>
+
+          <p>
+            By the law of large numbers, as \(M\) grows, this average converges
+            to the clean image \(x_0\).
+          </p>
+
+          <div class="math-block">
+            \[
+            \frac{1}{M}\sum_{m=1}^{M} x_t^{(m)}
+            =
+            x_0 + \sigma \frac{1}{M}\sum_{m=1}^{M}\varepsilon^{(m)}
+            \]
+          </div>
+
+          <p>
+            Since the average noise term goes to zero, the average noisy image
+            goes back to \(x_0\).
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Minimal Derivation</h2>
+          <p>
+            Forward process:
+          </p>
+
+          <div class="math-block">
+            \[
+            x_t = x_0 + \sigma \varepsilon,
+            \qquad
+            \varepsilon \sim \mathcal{N}(0, I)
+            \]
+          </div>
+
+          <ul>
+            <li>\(x_0\): original point or image.</li>
+            <li>\(\sigma\): noise level.</li>
+            <li>
+              \(\varepsilon \sim \mathcal{N}(0, I)\): Gaussian noise
+              independent from \(x_0\).
+            </li>
+          </ul>
+
+          <p>
+            We know \(x_0\), and want to find:
+          </p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}[x_t \mid x_0]
+            \]
+          </div>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            \mathbb{E}[x_t \mid x_0]
+            &= \mathbb{E}[x_0 + \sigma \varepsilon \mid x_0] \\
+            &= \mathbb{E}[x_0 \mid x_0]
+              + \mathbb{E}[\sigma \varepsilon \mid x_0]
+              \qquad \text{by linearity} \\
+            &= x_0 + \mathbb{E}[\sigma \varepsilon \mid x_0]
+              \qquad \text{since } x_0 \text{ is known} \\
+            &= x_0 + \sigma \mathbb{E}[\varepsilon \mid x_0]
+              \qquad \text{since } \sigma \text{ is deterministic}
+            \end{aligned}
+            \]
+          </div>
+
+          <p>
+            Since \(\varepsilon\) is independent from \(x_0\):
+          </p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}[\varepsilon \mid x_0] = \mathbb{E}[\varepsilon]
+            \]
+          </div>
+
+          <p>
+            And since \(\varepsilon \sim \mathcal{N}(0, I)\):
+          </p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}[\varepsilon] = 0
+            \]
+          </div>
+
+          <p>
+            Therefore:
+          </p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}[x_t \mid x_0]
+            = x_0 + \sigma \cdot 0
+            = x_0
+            \]
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>What I Think I Learned</h2>
+          <p>
+            The expected value of a forward process, as defined in this post, is
+            the initial point itself.
+          </p>
+          <p>
+            This does not mean that a single noisy image is unchanged. It means
+            that if we add fresh zero-mean Gaussian noise to the same image many
+            times, the noisy images are centered around the original image.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Open Questions</h2>
+          <ul>
+            <li>What happens with the standard deviation?</li>
+            <li>How does normalizing or clipping affect the results?</li>
+            <li>
+              How does this change in the standard DDPM forward process, where
+              \(x_0\) is also scaled down?
+            </li>
+          </ul>
+        </section>
+
+        <section class="post-section">
+          <h2>References</h2>
+          <ul class="references">
+            <li>
+              <a href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/notebooks/w02_forward_moments_solved.ipynb">Week 2 forward moments notebook</a>
+            </li>
+            <li>
+              <a href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/notes/w02_expectation_toolkit.md">Week 2 expectation toolkit</a>
+            </li>
+          </ul>
+        </section>
+      </article>
+
+      <p class="post-nav"><a href="../writing.html">Back to writing</a></p>
+
+      <footer class="footer">
+        <p>Find me online or get in touch.</p>
+        <div class="links">
+          <a href="https://github.com/juancopi81">GitHub</a>
+          <a href="https://huggingface.co/juancopi81">Hugging Face</a>
+          <a href="https://www.linkedin.com/in/juancarlospinerosp/">LinkedIn</a>
+          <a href="https://x.com/juancopi81">X / Twitter</a>
+          <a href="mailto:juancopi_81@hotmail.com">Email</a>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>
