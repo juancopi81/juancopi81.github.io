@@ -231,6 +231,32 @@ a {
   margin-top: 12px;
 }
 
+.table-wrap {
+  margin: 18px 0;
+  overflow-x: auto;
+}
+
+.post-content table {
+  border-collapse: collapse;
+  font-size: 15px;
+  min-width: 560px;
+  width: 100%;
+}
+
+.post-content th,
+.post-content td {
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.post-content th {
+  background: var(--accent-soft);
+  color: #1f2937;
+  font-weight: 700;
+}
+
 pre {
   background: var(--code-bg);
   border: 1px solid var(--border);
@@ -268,6 +294,25 @@ code {
 
 .math-block mjx-container[jax="SVG"][display="true"] {
   margin: 0;
+}
+
+.post-figure {
+  margin: 24px 0;
+}
+
+.post-figure img {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: block;
+  height: auto;
+  max-width: 100%;
+}
+
+.post-figure figcaption {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 8px;
 }
 
 .references {

@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Score of a Gaussian | Juan Carlos</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["\\[", "\\]"]],
+        },
+        svg: {
+          fontCache: "global",
+        },
+      };
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+    ></script>
+  </head>
+  <body>
+    <main class="page post-page">
+      <nav class="nav post-nav-top">
+        <a href="../index.html">Home</a>
+        <a href="../projects.html">Projects</a>
+        <a href="../writing.html">Writing</a>
+        <a href="../about.html">About</a>
+      </nav>
+
+      <article class="post-content math-note">
+        <header class="post-header">
+          <p class="eyebrow">Research Log</p>
+          <h1>Score of a Gaussian</h1>
+          <p class="post-meta">June 25, 2026 · Diffusion · Score functions</p>
+        </header>
+
+        <section class="post-section">
+          <h2>The Question</h2>
+          <p>Why does the score of a Gaussian point back to the mean?</p>
+          <p>
+            Short answer: the score points in the direction of higher density,
+            technically where the log-density increases, and for a 1-D Gaussian
+            this is literally the direction toward the mean.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Why I Care</h2>
+          <p>
+            In diffusion/score-based models, Gaussian noise appears everywhere,
+            and during sampling we want to know, at each step \(t\), which local
+            direction moves our sample to a more-plausible region. The score
+            function tells us that direction.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Setup and Definitions</h2>
+          <p>
+            We saw in the previous post that noisy samples are centered around
+            \(x_0\). The score function tells us now how we can move a noisy
+            sample toward that centered region around \(x_0\).
+          </p>
+          <p>
+            The common image to understand this concept is a mountain. Imagine
+            you are standing at \(x_t\), a specific location on the hill at a
+            specific moment \(t\). You want to go uphill, so you look around and
+            find a direction upward. In one dimension, the derivative tells you
+            if that direction is left or right. In many dimensions, you would
+            use the gradient.
+          </p>
+          <p>
+            This is the core idea of the score function: we apply the derivative
+            to the log of the conditional density \(q(x_t \mid x_0)\). We are
+            looking for an arrow, or direction, that tells us where things look
+            more probable. So basically, the score is a function that looks at
+            the log of this density and says which direction increases this
+            log-density.
+          </p>
+          <p>
+            You might ask: why should we use the log? Notice that the log turns
+            multiplications into additions and divisions into subtractions, so
+            it is easier to work with the log of the function than with the
+            function directly. This log trick does not change the direction; it
+            only scales the result of the gradient, as seen here:
+          </p>
+
+          <div class="math-block">
+            \[ \nabla_{x_t} \log q(x_t \mid x_0) = \frac{\nabla_{x_t} q(x_t \mid
+            x_0)}{q(x_t \mid x_0)} \]
+          </div>
+
+          <p>
+            Since \(q(x_t \mid x_0) &gt; 0\), this changes the scale of the
+            gradient but not its direction.
+          </p>
+
+          <p>
+            In this post, we will work with a fixed \(x_0\). So the score we are
+            studying is really \(\nabla_{x_t}\log q(x_t \mid x_0)\), not yet the
+            score of the full noisy-data distribution. We will also work with a
+            1-D Gaussian, which helps us hone in on the intuition we need to
+            grasp these models from first principles.
+          </p>
+          <p>
+            Going back to the mountain example, picture yourself now on a 1-D
+            Gaussian bell. Here things should click more easily: going uphill
+            means going toward the only, and therefore highest, peak of the
+            bell, which is <strong>the mean</strong>.
+          </p>
+          <p>
+            This is not guaranteed for a general distribution. If the
+            distribution is multimodal, the score still points locally uphill.
+            Following it may lead to a nearby local mode rather than the global
+            mode, and it does not need to point toward the mean at all.
+          </p>
+          <p>
+            With that in mind, let's remember the density of a 1-D Gaussian, now
+            written as the conditional corruption distribution:
+          </p>
+
+          <div class="math-block">
+            \[ q(x_t \mid x_0) = \frac{1}{\sigma\sqrt{2\pi}}
+            e^{-\frac{(x_t-x_0)^2}{2\sigma^2}} \]
+          </div>
+
+          <p>And let's define the score as:</p>
+
+          <div class="math-block">
+            \[ s(x_t, x_0) = \nabla_{x_t} \log q(x_t \mid x_0) \]
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>Minimal Derivation</h2>
+          <p>Take the same conditional density:</p>
+
+          <div class="math-block">
+            \[ q(x_t \mid x_0) = \frac{1}{\sigma\sqrt{2\pi}}
+            e^{-\frac{(x_t-x_0)^2}{2\sigma^2}} \]
+          </div>
+
+          <p>Take log:</p>
+
+          <div class="math-block">
+            \[ \begin{aligned} \log q(x_t \mid x_0) &=
+            \log\left(\frac{1}{\sigma\sqrt{2\pi}}\right) + \log
+            e^{-\frac{(x_t-x_0)^2}{2\sigma^2}} \\ &=
+            \log\left(\frac{1}{\sigma\sqrt{2\pi}}\right) -
+            \frac{(x_t-x_0)^2}{2\sigma^2} \end{aligned} \]
+          </div>
+
+          <p>
+            This is the same as substituting \(x = x_t\) and \(\mu = x_0\) in
+            the usual 1-D Gaussian. Now differentiate with respect to \(x_t\):
+          </p>
+
+          <div class="math-block">
+            \[ \begin{aligned} s(x_t, x_0) &= \nabla_{x_t} \log q(x_t \mid x_0)
+            \\ &= 0 - \frac{2(x_t-x_0)}{2\sigma^2} \\ &=
+            -\frac{x_t-x_0}{\sigma^2} \\ &= \frac{x_0-x_t}{\sigma^2}
+            \end{aligned} \]
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>What I Think I Learned</h2>
+          <p>
+            The score helps us find the region where more plausible samples
+            live. In a 1-D Gaussian, this is the center of the distribution.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Condition</th>
+                  <th>Score sign</th>
+                  <th>Interpretation</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>\(x_t &gt; x_0\)</td>
+                  <td>\(s(x_t, x_0) &lt; 0\)</td>
+                  <td>Points left, toward \(x_0\)</td>
+                </tr>
+                <tr>
+                  <td>\(x_t &lt; x_0\)</td>
+                  <td>\(s(x_t, x_0) &gt; 0\)</td>
+                  <td>Points right, toward \(x_0\)</td>
+                </tr>
+                <tr>
+                  <td>\(x_t = x_0\)</td>
+                  <td>\(s(x_t, x_0) = 0\)</td>
+                  <td>Already at the mode</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <figure class="post-figure">
+            <img
+              src="../assets/posts/gaussian-score-arrows.png"
+              alt="Gaussian density with score arrows pointing toward the mean"
+            />
+            <figcaption>
+              In this 1-D Gaussian example, the score arrows point toward
+              \(\mu\), the center of the Gaussian. The arrows show the sign, or
+              direction, of the score; their length is fixed for visibility, so
+              this plot does not encode score magnitude. In our conditional
+              notation, \(\mu\) is playing the role of \(x_0\).
+            </figcaption>
+          </figure>
+
+          <p>
+            Let's also think about the scaling factor \(\frac{1}{\sigma^2}\) in
+            \(s(x_t, x_0) = \frac{x_0 - x_t}{\sigma^2}\). The term
+            \(x_0 - x_t\) tells us which way the score points; the factor
+            \(\frac{1}{\sigma^2}\) controls how strongly. For the same distance
+            from \(x_0\), a larger variance makes the log-density flatter, so
+            the score has smaller magnitude. A smaller variance makes it
+            steeper, so the score has larger magnitude.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Open Questions</h2>
+          <ul>
+            <li>What does the score field look like for a multimodal distribution?</li>
+            <li>What changes in many dimensions?</li>
+            <li>What if we cannot calculate the score analytically?</li>
+            <li>
+              How is this related to \(\mathbb{E}[x_0 \mid x_t]\), the posterior
+              mean of the clean sample?
+            </li>
+          </ul>
+        </section>
+
+        <section class="post-section">
+          <h2>References</h2>
+          <ul class="references">
+            <li>
+              <a
+                href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/notes/w03_score_of_gaussian.md"
+                >Week 3 score of a Gaussian note</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/notebooks/w03_score_verification_solved.ipynb"
+                >Week 3 score verification notebook</a
+              >
+            </li>
+          </ul>
+        </section>
+      </article>
+
+      <p class="post-nav"><a href="../writing.html">Back to writing</a></p>
+
+      <footer class="footer">
+        <p>Find me online or get in touch.</p>
+        <div class="links">
+          <a href="https://github.com/juancopi81">GitHub</a>
+          <a href="https://huggingface.co/juancopi81">Hugging Face</a>
+          <a href="https://www.linkedin.com/in/juancarlospinerosp/">LinkedIn</a>
+          <a href="https://x.com/juancopi81">X / Twitter</a>
+          <a href="mailto:juancopi_81@hotmail.com">Email</a>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>
