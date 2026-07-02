@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Denoising Is Not Inversion | Juan Carlos</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["\\[", "\\]"]],
+        },
+        svg: {
+          fontCache: "global",
+        },
+      };
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+    ></script>
+  </head>
+  <body>
+    <main class="page post-page">
+      <nav class="nav post-nav-top">
+        <a href="../index.html">Home</a>
+        <a href="../projects.html">Projects</a>
+        <a href="../writing.html">Writing</a>
+        <a href="../about.html">About</a>
+      </nav>
+
+      <article class="post-content math-note">
+        <header class="post-header">
+          <p class="eyebrow">Research Log</p>
+          <h1>Denoising Is Not Inversion</h1>
+          <p class="post-meta">July 2, 2026 · Diffusion · Conditional expectation</p>
+        </header>
+
+        <section class="post-section">
+          <h2>The Question</h2>
+          <p>After seeing \(x_t\), could we recover exactly \(x_0\)?</p>
+          <p>
+            Short answer: in general, no. Once nonzero noise has been added,
+            the best we can do under mean-squared error (MSE) is estimate the
+            posterior conditional mean:
+          </p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}[x_0 \mid x_t]
+            \]
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>Why I Care</h2>
+          <p>
+            The goal of a diffusion model is to generate <em>clean</em> data
+            from an easy-to-sample distribution, like Gaussian noise. In the
+            <a href="2026-06-25-score-of-a-gaussian.html">previous post</a>, we
+            saw how we can use the score function to move back toward cleaner
+            regions. In this post, we'll highlight that moving toward those
+            cleaner regions is not exact reversal, but our best guess of
+            \(x_0\) from what we have, \(x_t\).
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Setup and Definitions</h2>
+          <p>
+            One common misconception in diffusion models is to think about the
+            reverse process &mdash; the denoising process &mdash; as exactly undoing the
+            forward process where noise was added to a clean image. Many
+            tutorials present an image that is first corrupted by adding
+            Gaussian noise, and then we see arrows from the final noise back to
+            the clean image.
+          </p>
+          <p>
+            This makes sense intuitively and can trick you into thinking that
+            you have mastered diffusion models. But then you see the math and
+            read the papers and you wonder: "Where is this coming from?" "Why
+            did we add noise again?" among many other questions.
+          </p>
+          <p>
+            So let's try to step back and see how we can actually denoise an
+            observed noisy sample.
+          </p>
+          <p>Let's work with a simplified scalar model:</p>
+
+          <div class="math-block">
+            \[
+            x_0 \sim \mathcal{N}(\mu, \sigma_0^2),
+            \qquad
+            \varepsilon \sim \mathcal{N}(0, 1),
+            \qquad
+            \varepsilon \perp x_0
+            \]
+          </div>
+
+          <p>
+            In words, the noise \(\varepsilon\) is independent of \(x_0\).
+          </p>
+
+          <p>Then the forward process is defined as:</p>
+
+          <div class="math-block">
+            \[
+            x_t = \alpha_t x_0 + \sigma_t \varepsilon
+            \]
+          </div>
+
+          <p>
+            Once we observe \(x_t\), we do not know how much of it came from
+            \(x_0\) and how much came from the noise \(\varepsilon\). Many
+            possible clean values could have produced the same noisy
+            observation, each with a different noise realization. So denoising
+            is not algebraic inversion; it is conditional guessing.
+          </p>
+
+          <p>
+            Let's also define \(g(x_t)\) as a function that estimates \(x_0\)
+            from \(x_t\), our denoiser.
+          </p>
+          <p>We will <em>now</em> minimize a squared-error objective:</p>
+
+          <div class="math-block">
+            \[
+            L(g) = \mathbb{E}\left[(x_0 - g(x_t))^2\right]
+            \]
+          </div>
+
+          <p>
+            This is the \(x_0\)-prediction MSE view of denoising. Many practical
+            diffusion models train a network to predict the noise or the score
+            instead, but these targets are closely connected through the
+            Gaussian forward process.
+          </p>
+          <p>
+            Also, the Gaussian setup gives us diffusion context, but the MSE
+            posterior-mean argument below is more general. It does not really
+            need Gaussianity; it needs the relevant conditional expectations to
+            exist.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Minimal Derivation</h2>
+
+          <div class="math-block">
+            \[
+            L(g) = \mathbb{E}\left[(x_0 - g(x_t))^2\right]
+            \]
+          </div>
+
+          <p>Let's condition on \(x_t\):</p>
+
+          <div class="math-block">
+            \[
+            L(g)
+            =
+            \mathbb{E}\left[
+              \mathbb{E}\left[(x_0 - g(x_t))^2 \mid x_t\right]
+            \right]
+            \]
+          </div>
+
+          <p>Let's define:</p>
+
+          <div class="math-block">
+            \[
+            m(x_t) := \mathbb{E}[x_0 \mid x_t]
+            \]
+          </div>
+
+          <p>the posterior mean.</p>
+          <p>
+            Algebra trick: subtract and add the posterior mean inside the
+            square.
+          </p>
+
+          <div class="math-block">
+            \[
+            x_0 - g(x_t)
+            =
+            (x_0 - m(x_t)) + (m(x_t) - g(x_t))
+            \]
+          </div>
+
+          <p>Then:</p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            \mathbb{E}\left[(x_0 - g(x_t))^2 \mid x_t\right]
+            &=
+            \mathbb{E}\left[
+              \left((x_0 - m(x_t)) + (m(x_t) - g(x_t))\right)^2
+              \mid x_t
+            \right] \\
+            &=
+            \mathbb{E}\left[(x_0 - m(x_t))^2 \mid x_t\right] \\
+            &\quad +
+            2\mathbb{E}\left[
+              (x_0 - m(x_t))(m(x_t) - g(x_t)) \mid x_t
+            \right] \\
+            &\quad +
+            \mathbb{E}\left[(m(x_t) - g(x_t))^2 \mid x_t\right]
+            \end{aligned}
+            \]
+          </div>
+
+          <p>First term:</p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}\left[(x_0 - m(x_t))^2 \mid x_t\right]
+            =
+            \operatorname{Var}(x_0 \mid x_t)
+            \]
+          </div>
+
+          <p>by definition.</p>
+          <p>Cross-term:</p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}\left[
+              (x_0 - m(x_t))(m(x_t) - g(x_t)) \mid x_t
+            \right]
+            =
+            (m(x_t) - g(x_t))
+            \mathbb{E}\left[x_0 - m(x_t) \mid x_t\right]
+            \]
+          </div>
+
+          <p>
+            Once we condition on \(x_t\), both \(m(x_t)\) and \(g(x_t)\) are
+            fixed, so the remaining expectation is:
+          </p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            \mathbb{E}\left[x_0 - \mathbb{E}[x_0 \mid x_t] \mid x_t\right]
+            &=
+            \mathbb{E}[x_0 \mid x_t] - \mathbb{E}[x_0 \mid x_t] \\
+            &= 0
+            \end{aligned}
+            \]
+          </div>
+
+          <p>So:</p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}\left[
+              (x_0 - m(x_t))(m(x_t) - g(x_t)) \mid x_t
+            \right]
+            = 0
+            \]
+          </div>
+
+          <p>Last term:</p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}\left[(m(x_t) - g(x_t))^2 \mid x_t\right]
+            =
+            (m(x_t) - g(x_t))^2
+            \]
+          </div>
+
+          <p>
+            Since \(m\) and \(g\) depend only on \(x_t\), there's no other
+            randomness.
+          </p>
+          <p>So:</p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}\left[(x_0 - g(x_t))^2 \mid x_t\right]
+            =
+            \operatorname{Var}(x_0 \mid x_t)
+            +
+            (m(x_t) - g(x_t))^2
+            \]
+          </div>
+
+          <div class="math-block">
+            \[
+            L(g)
+            =
+            \mathbb{E}\left[\operatorname{Var}(x_0 \mid x_t)\right]
+            +
+            \mathbb{E}\left[(m(x_t) - g(x_t))^2\right]
+            \]
+          </div>
+
+          <p>Where:</p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}\left[\operatorname{Var}(x_0 \mid x_t)\right]
+            \]
+          </div>
+
+          <p>is irreducible uncertainty, and</p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}\left[(m(x_t) - g(x_t))^2\right]
+            \]
+          </div>
+
+          <p>is the estimator mismatch.</p>
+        </section>
+
+        <section class="post-section">
+          <h2>What I Think I Learned</h2>
+          <p>We found that:</p>
+
+          <div class="math-block">
+            \[
+            L(g)
+            =
+            \mathbb{E}\left[\operatorname{Var}(x_0 \mid x_t)\right]
+            +
+            \mathbb{E}\left[(m(x_t) - g(x_t))^2\right]
+            \]
+          </div>
+
+          <p>
+            We cannot do anything about the first term since it doesn't depend
+            on \(g\). For the second term, the optimal outcome is when:
+          </p>
+
+          <div class="math-block">
+            \[
+            m(x_t) - g(x_t) = 0
+            \quad \Rightarrow \quad
+            g^*(x_t) = m(x_t)
+            \]
+          </div>
+
+          <p>But remember that \(m\) is the posterior conditional mean:</p>
+
+          <div class="math-block">
+            \[
+            m(x_t) = \mathbb{E}[x_0 \mid x_t]
+            \]
+          </div>
+
+          <p>
+            Under MSE, we just proved that the best function we could use to
+            predict a clean observation from a noisy point is the posterior
+            conditional mean \(\mathbb{E}[x_0 \mid x_t]\). We also observed
+            that the first term,
+            \(\mathbb{E}[\operatorname{Var}(x_0 \mid x_t)]\), is randomness we
+            cannot remove.
+          </p>
+          <p>
+            The key insight of this post is that we should interpret this MSE
+            denoising objective as learning the best conditional estimator, and
+            not as exactly reverting the noise that was added. This makes sense
+            intuitively: the best way to reduce the expected squared error is to
+            make \(g(x_t)\) the average clean sample we expect after observing
+            \(x_t\).
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Open Questions</h2>
+          <ul>
+            <li>How does this connect back to the score function?</li>
+            <li>What changes in multiple dimensions or multiple steps?</li>
+            <li>
+              How does this "many possible clean \(x_0\) values" view connect to
+              conditional expectation more formally?
+            </li>
+            <li>
+              Can we compute \(\mathbb{E}[x_0 \mid x_t]\) analytically for real
+              image data? What if not?
+            </li>
+          </ul>
+        </section>
+
+        <section class="post-section">
+          <h2>References</h2>
+          <ul class="references">
+            <li>
+              <a
+                href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/notes/w04_conditioning_in_diffusion.md"
+                >Week 4 conditioning in diffusion note</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/notebooks/w04_conditioning_todo4_check_solved.ipynb"
+                >Week 4 conditioning check notebook</a
+              >
+            </li>
+          </ul>
+        </section>
+      </article>
+
+      <p class="post-nav"><a href="../writing.html">Back to writing</a></p>
+
+      <footer class="footer">
+        <p>Find me online or get in touch.</p>
+        <div class="links">
+          <a href="https://github.com/juancopi81">GitHub</a>
+          <a href="https://huggingface.co/juancopi81">Hugging Face</a>
+          <a href="https://www.linkedin.com/in/juancarlospinerosp/">LinkedIn</a>
+          <a href="https://x.com/juancopi81">X / Twitter</a>
+          <a href="mailto:juancopi_81@hotmail.com">Email</a>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>
