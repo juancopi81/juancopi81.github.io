@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>When the Score Does Not Point Straight to the Mean | Juan Carlos</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["\\[", "\\]"]],
+        },
+        svg: {
+          fontCache: "global",
+        },
+      };
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+    ></script>
+  </head>
+  <body>
+    <main class="page post-page">
+      <nav class="nav post-nav-top">
+        <a href="../index.html">Home</a>
+        <a href="../projects.html">Projects</a>
+        <a href="../writing.html">Writing</a>
+        <a href="../about.html">About</a>
+      </nav>
+
+      <article class="post-content math-note">
+        <header class="post-header">
+          <p class="eyebrow">Research Log</p>
+          <h1>When the Score Does Not Point Straight to the Mean</h1>
+          <p class="post-meta">July 9, 2026 · Diffusion · Score functions</p>
+        </header>
+
+        <section class="post-section">
+          <h2>The Question</h2>
+          <p>Why can covariance structure bend or rotate score directions?</p>
+          <p>
+            Short answer: the score always points in the direction of higher
+            density. In a multivariate setting, unequal variances and
+            correlations can introduce <em>surprises</em> that the score needs
+            to account for. Instead of just pointing along the raw displacement
+            back to the mean, the score is shaped by the covariance structure.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Why I Care</h2>
+          <p>
+            In a
+            <a href="2026-06-25-score-of-a-gaussian.html">previous post</a>, we
+            started to understand the score function in a simplified 1-D
+            setting. Real diffusion models work in many dimensions, so it is
+            essential to analyze the changes that multidimensional distributions
+            bring for someone who wants to become more fluent in modern
+            generative models.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Setup and Definitions</h2>
+          <p>
+            Let's work with a bivariate normal distribution, but write it in
+            vector notation so the geometry is cleaner:
+          </p>
+
+          <div class="math-block">
+            \[
+            x =
+            \begin{bmatrix}
+            x_1 \\
+            x_2
+            \end{bmatrix},
+            \qquad
+            \mu =
+            \begin{bmatrix}
+            \mu_1 \\
+            \mu_2
+            \end{bmatrix},
+            \qquad
+            x \sim \mathcal{N}(\mu, \Sigma)
+            \]
+          </div>
+
+          <p>
+            For a two-dimensional Gaussian, the covariance matrix can be
+            written as:
+          </p>
+
+          <div class="math-block">
+            \[
+            \Sigma =
+            \begin{bmatrix}
+            \sigma_1^2 & \rho\sigma_1\sigma_2 \\
+            \rho\sigma_1\sigma_2 & \sigma_2^2
+            \end{bmatrix}
+            \]
+          </div>
+
+          <p>
+            I want to highlight three different cases and their impact on the
+            score function.
+          </p>
+
+          <p>
+            <strong>Isotropic covariance.</strong> This is the
+            <em>nicest</em> case: \(\rho = 0\) and
+            \(\sigma_1 = \sigma_2 = \sigma\). The concrete image is a bullseye.
+            If you throw a dart, any left-right or up-down miss is equally
+            likely. The highest-density target is the mean, and the score points
+            straight back toward it.
+          </p>
+
+          <p>
+            <strong>Diagonal covariance.</strong> Here \(\rho = 0\), but
+            \(\sigma_1 \ne \sigma_2\). For example, a machine might cut plates
+            very precisely in length but not so well in width. The score will be
+            pulled differently by each axis, as we will see.
+          </p>
+
+          <p>
+            <strong>Correlated covariance.</strong> This is the most common case:
+            \(\rho \ne 0\), and often \(\sigma_1 \ne \sigma_2\). A useful
+            example is height and weight. Both coordinates can be marginally
+            normal, but they are positively correlated: usually taller people
+            weigh more. The score still guides us toward higher
+            density, but not necessarily straight to the mean, because locally
+            another direction may correct the anomaly faster. For a very tall
+            person with low weight, the score could point in a direction that
+            lowers height and raises weight.
+          </p>
+
+          <p>Let's get our hands dirty with some formulas now.</p>
+        </section>
+
+        <section class="post-section">
+          <h2>Minimal Derivation</h2>
+          <p>
+            For finding the score function in a multivariate Gaussian
+            distribution, we'll follow a similar approach as we did for the 1-D
+            case:
+          </p>
+          <ul>
+            <li>We start from the PDF.</li>
+            <li>We take the log.</li>
+            <li>We differentiate.</li>
+          </ul>
+
+          <p>The multivariate Gaussian density is given by:</p>
+
+          <div class="math-block">
+            \[
+            p(x)
+            =
+            \frac{1}{(2\pi)^{d/2}|\Sigma|^{1/2}}
+            \exp\left(
+              -\frac{1}{2}(x-\mu)^T\Sigma^{-1}(x-\mu)
+            \right)
+            \]
+          </div>
+
+          <p>Taking logs gives us:</p>
+
+          <div class="math-block">
+            \[
+            \log p(x)
+            =
+            -\frac{d}{2}\log(2\pi)
+            -\frac{1}{2}\log|\Sigma|
+            -\frac{1}{2}(x-\mu)^T\Sigma^{-1}(x-\mu)
+            \]
+          </div>
+
+          <p>Let's define the precision matrix as:</p>
+
+          <div class="math-block">
+            \[
+            A = \Sigma^{-1}
+            \]
+          </div>
+
+          <p>and the displacement vector as:</p>
+
+          <div class="math-block">
+            \[
+            z = x - \mu
+            \]
+          </div>
+
+          <p>
+            So the third term of our log PDF becomes:
+          </p>
+
+          <div class="math-block">
+            \[
+            -\frac{1}{2}z^T A z
+            \]
+          </div>
+
+          <p>
+            Notice that the first two terms of the log PDF do not depend on
+            \(x\), so they become zero when differentiating with respect to
+            \(x\).
+          </p>
+
+          <p>
+            Let's also recall that, because \(A\) is symmetric:
+          </p>
+
+          <div class="math-block">
+            \[
+            \nabla_z(z^T A z) = 2Az
+            \]
+          </div>
+
+          <p>So we can now derive the score function \(s(x)\):</p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            \nabla_x \log p(x)
+            &=
+            \nabla_x
+            \left[
+              -\frac{1}{2}(x-\mu)^T\Sigma^{-1}(x-\mu)
+            \right] \\
+            &=
+            -\frac{1}{2}\nabla_x(z^T A z) \\
+            &=
+            -\frac{1}{2}(2Az) \\
+            &=
+            -Az \\
+            &=
+            -\Sigma^{-1}(x-\mu)
+            \end{aligned}
+            \]
+          </div>
+
+          <p>Therefore:</p>
+
+          <div class="math-block">
+            \[
+            s(x) = -\Sigma^{-1}(x-\mu)
+            \]
+          </div>
+
+          <p>Let's now see the three cases mentioned above.</p>
+
+          <p><strong>Isotropic.</strong></p>
+
+          <div class="math-block">
+            \[
+            \Sigma = \sigma^2 I
+            =
+            \begin{bmatrix}
+            \sigma^2 & 0 \\
+            0 & \sigma^2
+            \end{bmatrix}
+            \]
+          </div>
+
+          <div class="math-block">
+            \[
+            s(x)
+            =
+            -(\sigma^2 I)^{-1}(x-\mu)
+            =
+            -\frac{1}{\sigma^2}(x-\mu)
+            \]
+          </div>
+
+          <p>
+            The score here is similar to the 1-D case: it points straight back
+            toward the mean because both axes are scaled equally.
+          </p>
+
+          <p><strong>Diagonal.</strong></p>
+
+          <div class="math-block">
+            \[
+            \Sigma =
+            \begin{bmatrix}
+            \sigma_1^2 & 0 \\
+            0 & \sigma_2^2
+            \end{bmatrix}
+            \]
+          </div>
+
+          <div class="math-block">
+            \[
+            s(x)
+            =
+            -
+            \begin{bmatrix}
+            1/\sigma_1^2 & 0 \\
+            0 & 1/\sigma_2^2
+            \end{bmatrix}
+            \begin{bmatrix}
+            x_1-\mu_1 \\
+            x_2-\mu_2
+            \end{bmatrix}
+            =
+            \begin{bmatrix}
+            -(x_1-\mu_1)/\sigma_1^2 \\
+            -(x_2-\mu_2)/\sigma_2^2
+            \end{bmatrix}
+            \]
+          </div>
+
+          <p>
+            The coordinate with smaller variance gets the stronger pull because
+            its precision \(1/\sigma_i^2\) is larger. In the plate example, if
+            the length error is rarer, then that axis is pulled back more
+            strongly for the same displacement from the mean.
+          </p>
+
+          <p><strong>Correlated.</strong></p>
+
+          <div class="math-block">
+            \[
+            \Sigma =
+            \begin{bmatrix}
+            \sigma_1^2 & \rho\sigma_1\sigma_2 \\
+            \rho\sigma_1\sigma_2 & \sigma_2^2
+            \end{bmatrix}
+            \]
+          </div>
+
+          <div class="math-block">
+            \[
+            s(x) = -\Sigma^{-1}(x-\mu)
+            \]
+          </div>
+
+          <p>
+            The precision matrix \(\Sigma^{-1}\) is a linear transformation of
+            the displacement vector \((x-\mu)\). It can stretch different
+            directions by different amounts and mix the coordinates. In the
+            height/weight example, the score points toward the direction that
+            <em>corrects</em> the anomaly faster, not just toward the mean by
+            drawing a straight line.
+          </p>
+
+          <p>
+            For a single Gaussian, the destination does not change: if we keep
+            following the score, we still reach the mean. What changes is the
+            route.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Visualizing the Geometry</h2>
+          <p>
+            Deriving the score gives us the formula, but visualizing its
+            geometry makes the result easier to internalize. In the playground
+            below, we can move the starting point and compare the isotropic,
+            diagonal, and correlated cases to see how covariance changes the
+            direction of the score. For simplicity, the playground fixes the
+            mean at \(\mu=(0,0)\), so the plotted coordinates represent
+            displacements from the mean.
+          </p>
+
+          <div class="interactive-breakout">
+            <iframe
+              class="score-playground-frame"
+              data-score-playground
+              src="../assets/posts/gaussian-score-field-playground.html"
+              title="Interactive Gaussian score field playground"
+              loading="lazy"
+            ></iframe>
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>What I Think I Learned</h2>
+          <p>
+            When working in multiple dimensions, the score function takes into
+            account how dimensions affect each other. At first, we seem to lose
+            the intuition we built in the 1-D case. But after thinking about
+            concrete, real-world cases, things become clearer. The math then
+            adds the missing piece: the precision matrix tells us which parts
+            of the displacement are actually surprising.
+          </p>
+          <p>
+            The key object is the precision matrix:
+          </p>
+
+          <div class="math-block">
+            \[
+            \Sigma^{-1}
+            \]
+          </div>
+
+          <p>
+            It decides how the raw displacement vector \(x-\mu\) should be
+            transformed before becoming the score. If the covariance is
+            isotropic, the transformation is just a common scale and the score
+            points straight back to the mean. If the covariance has different
+            variances or correlations, the score can be bent away from that raw
+            direction because the distribution's geometry is different.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Open Questions</h2>
+          <ul>
+            <li>
+              If we want to go to the peaks of the mountain, how could we do it
+              faster than just following the score?
+            </li>
+            <li>How do diffusion models learn the score function?</li>
+          </ul>
+        </section>
+
+        <section class="post-section">
+          <h2>References</h2>
+          <ul class="references">
+            <li>
+              <a
+                href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/notes/w05_2d_gaussian_score.md"
+                >Week 5 2-D Gaussian score note</a
+              >
+            </li>
+            <li>
+              <a
+                href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/notebooks/w05_2d_gaussian_score_field_solved.ipynb"
+                >Week 5 2-D Gaussian score field notebook</a
+              >
+            </li>
+          </ul>
+        </section>
+      </article>
+
+      <p class="post-nav"><a href="../writing.html">Back to writing</a></p>
+
+      <footer class="footer">
+        <p>Find me online or get in touch.</p>
+        <div class="links">
+          <a href="https://github.com/juancopi81">GitHub</a>
+          <a href="https://huggingface.co/juancopi81">Hugging Face</a>
+          <a href="https://www.linkedin.com/in/juancarlospinerosp/">LinkedIn</a>
+          <a href="https://x.com/juancopi81">X / Twitter</a>
+          <a href="mailto:juancopi_81@hotmail.com">Email</a>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      const scorePlayground = document.querySelector(
+        "[data-score-playground]",
+      );
+
+      window.addEventListener("message", (event) => {
+        if (
+          !scorePlayground ||
+          event.source !== scorePlayground.contentWindow ||
+          event.data?.type !== "score-playground:resize"
+        ) {
+          return;
+        }
+
+        const requestedHeight = Number(event.data.height);
+        if (!Number.isFinite(requestedHeight)) return;
+
+        const frameHeight = Math.max(760, Math.min(requestedHeight + 2, 3200));
+        scorePlayground.style.height = `${frameHeight}px`;
+      });
+    </script>
+  </body>
+</html>

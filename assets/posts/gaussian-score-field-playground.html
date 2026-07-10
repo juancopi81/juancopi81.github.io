@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Play with the Score Field</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --panel: #ffffff;
+    --text: #18181b;
+    --muted: #71717a;
+    --accent: #2563eb;
+    --accent-soft: #eff6ff;
+    --line: #e4e4e7;
+    --subtle: #f4f4f5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+  .wrap {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  h1 {
+    font-size: 22px;
+    line-height: 1.25;
+    margin: 0 0 6px;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    margin-bottom: 18px;
+    max-width: 880px;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(270px, 300px) minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .workspace {
+    min-width: 0;
+  }
+  .controls h2, .panel h2 {
+    margin: 0 0 12px;
+    font-size: 17px;
+    line-height: 1.35;
+  }
+  .control-group {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .control-group:last-child { border-bottom: 0; }
+  .label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .label-row label {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .value {
+    font-size: 13px;
+    color: var(--muted);
+    min-width: 52px;
+    text-align: right;
+  }
+  input[type="range"] {
+    accent-color: var(--accent);
+    width: 100%;
+  }
+  select, button {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: white;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    min-height: 40px;
+  }
+  button {
+    cursor: pointer;
+    background: var(--subtle);
+    font-weight: 600;
+  }
+  button:hover { border-color: #a1a1aa; }
+  button:focus-visible,
+  select:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .checkbox-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .checkbox-grid label {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 14px;
+  }
+  .checkbox-grid input { accent-color: var(--accent); }
+  .viz-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .canvas-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  canvas {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 5 / 4;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: white;
+  }
+  .small {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(120px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .metric {
+    padding: 10px;
+    background: var(--subtle);
+    border-radius: 6px;
+    border: 1px solid var(--line);
+  }
+  .metric .k {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .metric .v {
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .callout {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 6px;
+    background: var(--accent-soft);
+    border: 1px solid #bfdbfe;
+    line-height: 1.45;
+    font-size: 14px;
+  }
+  .legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .legend span::before {
+    content: "";
+    display: inline-block;
+    width: 14px;
+    height: 3px;
+    margin-right: 6px;
+    vertical-align: middle;
+    border-radius: 4px;
+    background: #000;
+  }
+  .legend .mean::before { background: #111827; height: 10px; width: 10px; border-radius: 50%; }
+  .legend .point::before { background: #dc2626; height: 10px; width: 10px; border-radius: 50%; }
+  .legend .score::before { background: #2563eb; }
+  .legend .direct::before { background: #9ca3af; }
+  .legend .path::before { background: #16a34a; }
+  .scenario {
+    font-size: 14px;
+    line-height: 1.45;
+    background: var(--subtle);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px;
+  }
+  .footer-note {
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .look-for {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+  .look-for li { margin-bottom: 5px; }
+
+  @media (max-width: 980px) {
+    .layout { grid-template-columns: 1fr; }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 16px;
+    }
+    .controls h2,
+    .controls .footer-note { grid-column: 1 / -1; }
+    .control-group {
+      border-bottom: 0;
+      border-top: 1px solid var(--line);
+      margin: 0;
+      padding: 12px 0 0;
+    }
+  }
+  @media (max-width: 720px) {
+    .viz-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .wrap { padding: 14px; }
+    .controls { grid-template-columns: 1fr; }
+    .controls h2,
+    .controls .footer-note { grid-column: auto; }
+    .metrics { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Play with the Score Field</h1>
+  <div class="subtitle">
+    The <strong>mean</strong> is the peak of the mountain. The
+    <strong>score</strong> is the local direction of steepest increase in
+    log-density. Compare the three covariance cases and see when the score
+    points straight to the peak, and when it does not.
+  </div>
+
+  <div class="layout">
+    <div class="panel controls">
+      <h2>Controls</h2>
+
+      <div class="control-group">
+        <div class="label-row">
+          <label for="caseSelect">Covariance case</label>
+        </div>
+        <select id="caseSelect">
+          <option value="isotropic">1) Isotropic covariance</option>
+          <option value="diagonal">2) Diagonal covariance</option>
+          <option value="correlated">3) Correlated covariance</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <div class="scenario" id="scenarioBox"></div>
+      </div>
+
+      <div class="control-group">
+        <div class="label-row">
+          <label id="xLabel" for="x0">Start x</label>
+          <span class="value" id="x0Val">2.00</span>
+        </div>
+        <input id="x0" type="range" min="-6" max="6" value="2.2" step="0.01" />
+
+        <div class="label-row" style="margin-top:10px;">
+          <label id="yLabel" for="y0">Start y</label>
+          <span class="value" id="y0Val">1.50</span>
+        </div>
+        <input id="y0" type="range" min="-6" max="6" value="1.7" step="0.01" />
+      </div>
+
+      <div class="control-group">
+        <div class="label-row">
+          <label for="sigmaX">σx</label>
+          <span class="value" id="sigmaXVal">1.40</span>
+        </div>
+        <input id="sigmaX" type="range" min="0.3" max="3.5" value="1.4" step="0.01" />
+
+        <div class="label-row" style="margin-top:10px;">
+          <label for="sigmaY">σy</label>
+          <span class="value" id="sigmaYVal">1.40</span>
+        </div>
+        <input id="sigmaY" type="range" min="0.3" max="3.5" value="1.4" step="0.01" />
+
+        <div id="rhoWrap">
+          <div class="label-row" style="margin-top:10px;">
+            <label for="rho">ρ (correlation)</label>
+            <span class="value" id="rhoVal">0.70</span>
+          </div>
+          <input id="rho" type="range" min="-0.95" max="0.95" value="0.70" step="0.01" />
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="label-row">
+          <label for="pathSlider">Follow score path</label>
+          <span class="value" id="pathVal">0%</span>
+        </div>
+        <input id="pathSlider" type="range" min="0" max="100" value="0" step="1" />
+        <div class="small" style="margin-top:6px;">
+          Following the path recomputes the local score direction at every step.
+        </div>
+      </div>
+
+      <div class="control-group">
+        <div class="checkbox-grid">
+          <label><input type="checkbox" id="showScore" checked /> Show score arrow</label>
+          <label><input type="checkbox" id="showDirect" checked /> Show straight line to mean</label>
+          <label><input type="checkbox" id="showPath" checked /> Show followed score path</label>
+          <label><input type="checkbox" id="fixAxes" checked /> Fix axes for easier comparison</label>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <button id="resetPreset">Reset to case preset</button>
+      </div>
+
+      <div class="footer-note">
+        <strong>What to look for:</strong>
+        <ul class="look-for">
+          <li>In the isotropic case, the score arrow points exactly toward the mean.</li>
+          <li>In the diagonal case, the low-variance axis gets a stronger pull.</li>
+          <li>In the correlated case, the score corrects toward the typical relationship, not necessarily straight to the peak.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="workspace">
+      <div class="panel">
+        <h2>What is happening right now?</h2>
+        <div class="legend">
+          <span class="mean">Mean / peak</span>
+          <span class="point">Current point</span>
+          <span class="score">Score arrow</span>
+          <span class="direct">Direct line to mean</span>
+          <span class="path">Score-following path</span>
+        </div>
+        <div class="metrics">
+          <div class="metric">
+            <div class="k">Angle(score, direct-to-mean)</div>
+            <div class="v" id="angleMetric">0.0°</div>
+          </div>
+          <div class="metric">
+            <div class="k">Relative density height</div>
+            <div class="v" id="densityMetric">0.000</div>
+          </div>
+          <div class="metric">
+            <div class="k">Distance to mean</div>
+            <div class="v" id="distanceMetric">0.00</div>
+          </div>
+        </div>
+        <div class="callout" id="calloutBox"></div>
+      </div>
+
+      <div class="viz-grid" style="margin-top:16px;">
+        <div class="panel canvas-box">
+          <h2>Top-down contour view</h2>
+          <canvas id="contourCanvas" width="600" height="480"></canvas>
+          <div class="small">
+            This is the best view to compare the <b>score arrow</b> against the <b>straight line to the mean</b>.
+            The score arrow is perpendicular to the local density contour. Its displayed length is fixed so we can focus on direction rather than magnitude.
+          </div>
+        </div>
+
+        <div class="panel canvas-box">
+          <h2>3D mountain view</h2>
+          <canvas id="surfaceCanvas" width="600" height="480"></canvas>
+          <div class="small">
+            Here the mean is the <b>peak</b> of the mountain. The blue arrow near the point shows the local uphill direction induced by the score.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const els = {
+  caseSelect: document.getElementById('caseSelect'),
+  x0: document.getElementById('x0'),
+  y0: document.getElementById('y0'),
+  sigmaX: document.getElementById('sigmaX'),
+  sigmaY: document.getElementById('sigmaY'),
+  rho: document.getElementById('rho'),
+  rhoWrap: document.getElementById('rhoWrap'),
+  pathSlider: document.getElementById('pathSlider'),
+  showScore: document.getElementById('showScore'),
+  showDirect: document.getElementById('showDirect'),
+  showPath: document.getElementById('showPath'),
+  fixAxes: document.getElementById('fixAxes'),
+  resetPreset: document.getElementById('resetPreset'),
+  x0Val: document.getElementById('x0Val'),
+  y0Val: document.getElementById('y0Val'),
+  sigmaXVal: document.getElementById('sigmaXVal'),
+  sigmaYVal: document.getElementById('sigmaYVal'),
+  rhoVal: document.getElementById('rhoVal'),
+  pathVal: document.getElementById('pathVal'),
+  xLabel: document.getElementById('xLabel'),
+  yLabel: document.getElementById('yLabel'),
+  scenarioBox: document.getElementById('scenarioBox'),
+  angleMetric: document.getElementById('angleMetric'),
+  densityMetric: document.getElementById('densityMetric'),
+  distanceMetric: document.getElementById('distanceMetric'),
+  calloutBox: document.getElementById('calloutBox'),
+  contourCanvas: document.getElementById('contourCanvas'),
+  surfaceCanvas: document.getElementById('surfaceCanvas'),
+};
+
+const presets = {
+  isotropic: {
+    x0: 2.2, y0: 1.7, sigmaX: 1.4, sigmaY: 1.4, rho: 0.0,
+    xLabel: "Horizontal miss (dartboard)",
+    yLabel: "Vertical miss (dartboard)",
+    scenario: "<b>Real example:</b> Dart throws around a bullseye. Left-right and up-down miss are equally variable, so the normal region is circular.",
+  },
+  diagonal: {
+    x0: 2.2, y0: 1.7, sigmaX: 0.8, sigmaY: 2.0, rho: 0.0,
+    xLabel: "Length error (factory machine)",
+    yLabel: "Width error (factory machine)",
+    scenario: "<b>Real example:</b> A factory machine cuts plates. Length is controlled very precisely, width is noisier. Errors are independent, but one axis gets a stronger pull.",
+  },
+  correlated: {
+    x0: 2.2, y0: -1.4, sigmaX: 1.2, sigmaY: 1.3, rho: 0.72,
+    xLabel: "Height deviation (person)",
+    yLabel: "Weight deviation (person)",
+    scenario: "<b>Real example:</b> Height and weight. Taller people tend to weigh more, so the high-density region is a tilted ellipse.",
+  },
+};
+
+function fmt(x, digits=2) { return Number(x).toFixed(digits); }
+function dot(a,b) { return a[0]*b[0] + a[1]*b[1]; }
+function norm(a) { return Math.hypot(a[0], a[1]); }
+function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+
+function getState() {
+  const caseName = els.caseSelect.value;
+  let sx = parseFloat(els.sigmaX.value);
+  let sy = parseFloat(els.sigmaY.value);
+  let rho = parseFloat(els.rho.value);
+  if (caseName === "isotropic") {
+    sy = sx;
+    rho = 0;
+  } else if (caseName === "diagonal") {
+    rho = 0;
+  }
+  return {
+    caseName,
+    x0: parseFloat(els.x0.value),
+    y0: parseFloat(els.y0.value),
+    sigmaX: sx,
+    sigmaY: sy,
+    rho: rho,
+    t: parseInt(els.pathSlider.value, 10) / 100.0,
+    showScore: els.showScore.checked,
+    showDirect: els.showDirect.checked,
+    showPath: els.showPath.checked,
+    fixAxes: els.fixAxes.checked,
+  };
+}
+
+function covariance(state) {
+  const {sigmaX:sx, sigmaY:sy, rho} = state;
+  return [[sx*sx, rho*sx*sy],[rho*sx*sy, sy*sy]];
+}
+
+function inverse2(M) {
+  const [[a,b],[c,d]] = M;
+  const det = a*d - b*c;
+  return [[d/det, -b/det],[-c/det, a/det]];
+}
+
+function matVec(M, v) {
+  return [
+    M[0][0]*v[0] + M[0][1]*v[1],
+    M[1][0]*v[0] + M[1][1]*v[1]
+  ];
+}
+
+function density(state, p) {
+  const P = inverse2(covariance(state));
+  const q = dot(p, matVec(P, p));
+  return Math.exp(-0.5*q);
+}
+
+function score(state, p) {
+  const P = inverse2(covariance(state));
+  const Pv = matVec(P, p);
+  return [-Pv[0], -Pv[1]];
+}
+
+function stableScoreStepSize(state, stepFraction=0.16) {
+  const P = inverse2(covariance(state));
+  const tr = P[0][0] + P[1][1];
+  const det = P[0][0]*P[1][1] - P[0][1]*P[1][0];
+  const disc = Math.max(0, tr*tr - 4*det);
+  const lambdaMax = 0.5*(tr + Math.sqrt(disc));
+  return stepFraction / Math.max(lambdaMax, 1e-6);
+}
+
+function takeScoreStep(state, p, alpha=stableScoreStepSize(state)) {
+  const s = score(state, p);
+  return [p[0] + alpha*s[0], p[1] + alpha*s[1]];
+}
+
+function pathPoints(state, steps=160) {
+  let p = [state.x0, state.y0];
+  const out = [p.slice()];
+  const alpha = stableScoreStepSize(state);
+
+  for (let i=0; i<steps; i++) {
+    p = takeScoreStep(state, p, alpha);
+    out.push(p.slice());
+    if (norm(p) < 0.01) break;
+  }
+  return out;
+}
+
+function interpolatePath(path, t) {
+  const idx = t * (path.length - 1);
+  const i0 = Math.floor(idx);
+  const i1 = Math.min(path.length - 1, i0 + 1);
+  const w = idx - i0;
+  const p0 = path[i0], p1 = path[i1];
+  return [
+    p0[0]*(1-w) + p1[0]*w,
+    p0[1]*(1-w) + p1[1]*w
+  ];
+}
+
+function eig2Sym(M) {
+  const a = M[0][0], b = M[0][1], d = M[1][1];
+  const tr = a + d;
+  const disc = Math.sqrt((a-d)*(a-d) + 4*b*b);
+  const l1 = 0.5*(tr + disc);
+  const l2 = 0.5*(tr - disc);
+  let v1;
+  if (Math.abs(b) > 1e-10) v1 = [l1 - d, b];
+  else v1 = a >= d ? [1,0] : [0,1];
+  const n1 = norm(v1); v1 = [v1[0]/n1, v1[1]/n1];
+  const v2 = [-v1[1], v1[0]];
+  return {values:[l1,l2], vectors:[v1,v2]};
+}
+
+function getDomain(state) {
+  if (state.fixAxes) return {xmin:-5, xmax:5, ymin:-5, ymax:5};
+  const sx = state.sigmaX, sy = state.sigmaY;
+  const spanX = Math.max(4.0, Math.abs(state.x0)+1.0, 3.0*sx);
+  const spanY = Math.max(4.0, Math.abs(state.y0)+1.0, 3.0*sy);
+  const span = Math.max(spanX, spanY);
+  return {xmin:-span, xmax:span, ymin:-span, ymax:span};
+}
+
+function makeMapper(domain, w, h, pad=38) {
+  const domainW = domain.xmax - domain.xmin;
+  const domainH = domain.ymax - domain.ymin;
+  const scale = Math.min((w - 2*pad) / domainW, (h - 2*pad) / domainH);
+  const plotW = domainW * scale;
+  const plotH = domainH * scale;
+  const left = (w - plotW) / 2;
+  const top = (h - plotH) / 2;
+
+  return function xyToPx(x, y) {
+    return [
+      left + (x - domain.xmin) * scale,
+      top + (domain.ymax - y) * scale,
+    ];
+  };
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, color="#2563eb", width=2.5) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = width;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  const ang = Math.atan2(y2-y1, x2-x1);
+  const ah = 10;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - ah*Math.cos(ang - Math.PI/7), y2 - ah*Math.sin(ang - Math.PI/7));
+  ctx.lineTo(x2 - ah*Math.cos(ang + Math.PI/7), y2 - ah*Math.sin(ang + Math.PI/7));
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawAxes(ctx, mapper, domain, w, h) {
+  ctx.save();
+  ctx.strokeStyle = "#e5e7eb";
+  ctx.lineWidth = 1;
+  for (let gx = Math.ceil(domain.xmin); gx <= Math.floor(domain.xmax); gx++) {
+    const [x1, y1] = mapper(gx, domain.ymin);
+    const [x2, y2] = mapper(gx, domain.ymax);
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  }
+  for (let gy = Math.ceil(domain.ymin); gy <= Math.floor(domain.ymax); gy++) {
+    const [x1, y1] = mapper(domain.xmin, gy);
+    const [x2, y2] = mapper(domain.xmax, gy);
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  }
+
+  ctx.strokeStyle = "#9ca3af";
+  ctx.lineWidth = 1.5;
+  const [zx1, zy1] = mapper(domain.xmin, 0);
+  const [zx2, zy2] = mapper(domain.xmax, 0);
+  const [yx1, yy1] = mapper(0, domain.ymin);
+  const [yx2, yy2] = mapper(0, domain.ymax);
+  ctx.beginPath(); ctx.moveTo(zx1, zy1); ctx.lineTo(zx2, zy2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(yx1, yy1); ctx.lineTo(yx2, yy2); ctx.stroke();
+  ctx.fillStyle = "#6b7280";
+  ctx.font = "12px system-ui";
+  ctx.fillText("0", yx1 + 6, zy1 - 6);
+  ctx.restore();
+}
+
+function drawContours(ctx, state, mapper, domain) {
+  const P = inverse2(covariance(state));
+  const eig = eig2Sym(P); // for q(x)=x^T P x
+  const levels = [0.5, 1.0, 2.0, 3.0, 4.5, 6.0];
+  ctx.save();
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.lineWidth = 1.4;
+  levels.forEach(q => {
+    ctx.beginPath();
+    const pts = [];
+    for (let k=0; k<=220; k++) {
+      const t = 2*Math.PI*k/220;
+      const a = Math.cos(t) / Math.sqrt(eig.values[0]) * Math.sqrt(q);
+      const b = Math.sin(t) / Math.sqrt(eig.values[1]) * Math.sqrt(q);
+      const x = a*eig.vectors[0][0] + b*eig.vectors[1][0];
+      const y = a*eig.vectors[0][1] + b*eig.vectors[1][1];
+      pts.push(mapper(x,y));
+    }
+    pts.forEach((pt, i) => { if(i===0) ctx.moveTo(pt[0], pt[1]); else ctx.lineTo(pt[0], pt[1]); });
+    ctx.stroke();
+  });
+  ctx.restore();
+}
+
+function drawContourView(state, path, pCur) {
+  const canvas = els.contourCanvas;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const domain = getDomain(state);
+  const mapper = makeMapper(domain, w, h, 40);
+
+  drawAxes(ctx, mapper, domain, w, h);
+  drawContours(ctx, state, mapper, domain);
+
+  const [mx, my] = mapper(0,0);
+  const [px, py] = mapper(pCur[0], pCur[1]);
+
+  // Path
+  if (state.showPath) {
+    ctx.save();
+    ctx.strokeStyle = "#16a34a";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    path.forEach((p, i) => {
+      const pt = mapper(p[0], p[1]);
+      if (i===0) ctx.moveTo(pt[0], pt[1]);
+      else ctx.lineTo(pt[0], pt[1]);
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Direct line to mean
+  if (state.showDirect) {
+    ctx.save();
+    ctx.setLineDash([7,5]);
+    ctx.strokeStyle = "#9ca3af";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px, py); ctx.lineTo(mx, my); ctx.stroke();
+    ctx.restore();
+  }
+
+  // Score arrow
+  const s = score(state, pCur);
+  const sn = norm(s);
+  if (state.showScore && sn > 1e-8) {
+    const scale = 0.75; // in data units
+    const sdir = [s[0]/sn, s[1]/sn];
+    const end = [pCur[0] + scale*sdir[0], pCur[1] + scale*sdir[1]];
+    const [ex, ey] = mapper(end[0], end[1]);
+    drawArrow(ctx, px, py, ex, ey, "#2563eb", 2.6);
+  }
+
+  // Mean point
+  ctx.save();
+  ctx.fillStyle = "#111827";
+  ctx.beginPath(); ctx.arc(mx, my, 6, 0, 2*Math.PI); ctx.fill();
+  ctx.font = "13px system-ui"; ctx.fillText("mean / peak", mx + 10, my - 10);
+
+  // Current point
+  ctx.fillStyle = "#dc2626";
+  ctx.beginPath(); ctx.arc(px, py, 6, 0, 2*Math.PI); ctx.fill();
+  ctx.font = "13px system-ui"; ctx.fillText("current point", px + 10, py - 10);
+  ctx.restore();
+
+  // Axis labels
+  ctx.save();
+  ctx.fillStyle = "#374151";
+  ctx.font = "12px system-ui";
+  ctx.fillText(els.xLabel.textContent, w/2 - 45, h - 10);
+  ctx.save();
+  ctx.translate(14, h/2 + 45);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText(els.yLabel.textContent, 0, 0);
+  ctx.restore();
+  ctx.restore();
+}
+
+function project3D(x, y, z, canvas) {
+  const w = canvas.width, h = canvas.height;
+  const scale = 60;
+  const X = w/2 + scale*(x - 0.8*y);
+  const Y = h*0.75 - scale*(1.5*z + 0.25*x + 0.45*y);
+  return [X, Y];
+}
+
+function drawSurfaceView(state, path, pCur) {
+  const canvas = els.surfaceCanvas;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0,0,w,h);
+
+  const domain = getDomain(state);
+  const nx = 22, ny = 22;
+  const xs = Array.from({length:nx}, (_,i) => domain.xmin + (domain.xmax-domain.xmin)*i/(nx-1));
+  const ys = Array.from({length:ny}, (_,j) => domain.ymin + (domain.ymax-domain.ymin)*j/(ny-1));
+
+  // Mesh
+  ctx.save();
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.lineWidth = 1;
+  for (let j=0; j<ny; j++) {
+    ctx.beginPath();
+    for (let i=0; i<nx; i++) {
+      const x = xs[i], y = ys[j];
+      const z = density(state, [x,y]);
+      const pt = project3D(x,y,z,canvas);
+      if (i===0) ctx.moveTo(pt[0], pt[1]);
+      else ctx.lineTo(pt[0], pt[1]);
+    }
+    ctx.stroke();
+  }
+  for (let i=0; i<nx; i++) {
+    ctx.beginPath();
+    for (let j=0; j<ny; j++) {
+      const x = xs[i], y = ys[j];
+      const z = density(state, [x,y]);
+      const pt = project3D(x,y,z,canvas);
+      if (j===0) ctx.moveTo(pt[0], pt[1]);
+      else ctx.lineTo(pt[0], pt[1]);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // projected path
+  if (state.showPath) {
+    ctx.save();
+    ctx.strokeStyle = "#16a34a";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    path.forEach((p, i) => {
+      const z = density(state, p);
+      const pt = project3D(p[0], p[1], z, canvas);
+      if(i===0) ctx.moveTo(pt[0], pt[1]);
+      else ctx.lineTo(pt[0], pt[1]);
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Mean
+  const meanPt = project3D(0, 0, density(state, [0,0]), canvas);
+  ctx.save();
+  ctx.fillStyle = "#111827";
+  ctx.beginPath(); ctx.arc(meanPt[0], meanPt[1], 6, 0, 2*Math.PI); ctx.fill();
+  ctx.font = "13px system-ui"; ctx.fillText("peak", meanPt[0] + 10, meanPt[1] - 10);
+  ctx.restore();
+
+  // Current point
+  const zc = density(state, pCur);
+  const curPt = project3D(pCur[0], pCur[1], zc, canvas);
+  ctx.save();
+  ctx.fillStyle = "#dc2626";
+  ctx.beginPath(); ctx.arc(curPt[0], curPt[1], 6, 0, 2*Math.PI); ctx.fill();
+  ctx.font = "13px system-ui"; ctx.fillText("current", curPt[0] + 10, curPt[1] - 10);
+  ctx.restore();
+
+  // Local uphill arrow in 3D (projected from tiny move in score direction)
+  const s = score(state, pCur);
+  const sn = norm(s);
+  if (state.showScore && sn > 1e-8) {
+    const step = takeScoreStep(state, pCur);
+    const z2 = density(state, step);
+    const p2 = project3D(step[0], step[1], z2, canvas);
+    drawArrow(ctx, curPt[0], curPt[1], p2[0], p2[1], "#2563eb", 2.6);
+  }
+
+  // little axis labels
+  ctx.save();
+  ctx.fillStyle = "#6b7280";
+  ctx.font = "12px system-ui";
+  ctx.fillText("Higher up = higher relative density", 14, 22);
+  ctx.restore();
+}
+
+function updateTexts(state, pCur) {
+  els.x0Val.textContent = fmt(state.x0);
+  els.y0Val.textContent = fmt(state.y0);
+  els.sigmaXVal.textContent = fmt(state.sigmaX);
+  els.sigmaYVal.textContent = fmt(state.sigmaY);
+  els.rhoVal.textContent = fmt(state.rho);
+  els.pathVal.textContent = Math.round(state.t*100) + "%";
+
+  const toMean = [-pCur[0], -pCur[1]];
+  const s = score(state, pCur);
+  const d = norm(toMean);
+  const hasDirection = norm(s) >= 1e-8 && d >= 1e-8;
+  const ang = hasDirection
+    ? Math.acos(clamp(dot(s, toMean)/(norm(s)*d), -1, 1)) * 180/Math.PI
+    : null;
+
+  els.angleMetric.textContent = hasDirection ? fmt(ang, 1) + "°" : "—";
+  els.densityMetric.textContent = fmt(density(state, pCur), 3);
+  els.distanceMetric.textContent = fmt(d, 2);
+
+  let caseText = "";
+  if (state.caseName === "isotropic") {
+    caseText = "Because the contours are circles, the steepest uphill direction is exactly toward the peak.";
+  } else if (state.caseName === "diagonal") {
+    caseText = "The low-variance axis is penalized more strongly. So even with zero correlation, the score can lean away from the direct-to-mean line.";
+  } else {
+    caseText = "Correlation tilts the ellipses. The score is normal to those tilted contours, so it corrects you toward the typical relationship, not necessarily straight to the peak.";
+  }
+
+  let alignText = "";
+  let angleText = "";
+  if (!hasDirection) {
+    alignText = "<b>At the mean, the score is zero.</b>";
+    angleText = "There is no direction to compare.";
+  } else if (ang < 1) {
+    alignText = "<b>Right now the score is essentially pointing straight to the mean.</b>";
+    angleText = `Angle difference: <b>${fmt(ang,1)}°</b>.`;
+  } else if (ang < 10) alignText = "<b>Right now the score is only slightly different from the direct-to-mean direction.</b>";
+  else alignText = "<b>Right now the score clearly differs from the direct-to-mean direction.</b>";
+
+  if (hasDirection && !angleText) {
+    angleText = `Angle difference: <b>${fmt(ang,1)}°</b>.`;
+  }
+
+  els.calloutBox.innerHTML = `${alignText}<br/>${angleText}<br/>${caseText}`;
+}
+
+function applyPreset(caseName) {
+  const p = presets[caseName];
+  els.x0.value = p.x0;
+  els.y0.value = p.y0;
+  els.sigmaX.value = p.sigmaX;
+  els.sigmaY.value = p.sigmaY;
+  els.rho.value = p.rho;
+  els.pathSlider.value = 0;
+  els.xLabel.textContent = p.xLabel;
+  els.yLabel.textContent = p.yLabel;
+  els.scenarioBox.innerHTML = p.scenario;
+}
+
+function updateUIForCase(caseName) {
+  els.rhoWrap.style.display = (caseName === "correlated") ? "block" : "none";
+  if (caseName === "isotropic") {
+    els.sigmaY.disabled = true;
+    els.sigmaY.parentElement.style.opacity = 0.75;
+  } else {
+    els.sigmaY.disabled = false;
+    els.sigmaY.parentElement.style.opacity = 1.0;
+  }
+}
+
+function render() {
+  const state = getState();
+  // Keep sigmaY in sync for isotropic
+  if (state.caseName === "isotropic") {
+    els.sigmaY.value = els.sigmaX.value;
+  }
+  const path = pathPoints(state, 160);
+  const pCur = interpolatePath(path, state.t);
+  updateTexts(state, pCur);
+  drawContourView(state, path, pCur);
+  drawSurfaceView(state, path, pCur);
+}
+
+els.caseSelect.addEventListener('change', () => {
+  applyPreset(els.caseSelect.value);
+  updateUIForCase(els.caseSelect.value);
+  render();
+});
+
+[
+  els.x0, els.y0, els.sigmaX, els.sigmaY, els.rho, els.pathSlider,
+  els.showScore, els.showDirect, els.showPath, els.fixAxes
+].forEach(el => el.addEventListener('input', render));
+
+els.resetPreset.addEventListener('click', () => {
+  applyPreset(els.caseSelect.value);
+  render();
+});
+
+// Initialize
+applyPreset("isotropic");
+updateUIForCase("isotropic");
+render();
+
+function reportHeight() {
+  if (window.parent === window) return;
+
+  const playground = document.querySelector(".wrap");
+  const height = playground
+    ? Math.ceil(playground.getBoundingClientRect().height)
+    : Math.ceil(document.body.scrollHeight);
+
+  window.parent.postMessage(
+    {
+      type: "score-playground:resize",
+      height,
+    },
+    "*"
+  );
+}
+
+window.addEventListener("load", reportHeight);
+if ("ResizeObserver" in window) {
+  new ResizeObserver(reportHeight).observe(document.body);
+}
+setTimeout(reportHeight, 100);
+</script>
+</body>
+</html>

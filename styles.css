@@ -315,6 +315,21 @@ code {
   margin-top: 8px;
 }
 
+.interactive-breakout {
+  margin: 24px 0 0 50%;
+  transform: translateX(-50%);
+  width: min(1180px, calc(100vw - 48px));
+}
+
+.score-playground-frame {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: block;
+  min-height: 920px;
+  width: 100%;
+}
+
 .references {
   padding-left: 20px;
 }
@@ -369,6 +384,14 @@ code {
 
   .card {
     padding: 18px;
+  }
+
+  .interactive-breakout {
+    width: calc(100vw - 36px);
+  }
+
+  .score-playground-frame {
+    min-height: 1600px;
   }
 
   .footer {
