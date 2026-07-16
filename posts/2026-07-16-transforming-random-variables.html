@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Changing Variables Without Changing Probability | Juan Carlos</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["\\[", "\\]"]],
+        },
+        svg: {
+          fontCache: "global",
+        },
+      };
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+    ></script>
+  </head>
+  <body>
+    <main class="page post-page">
+      <nav class="nav post-nav-top">
+        <a href="../index.html">Home</a>
+        <a href="../projects.html">Projects</a>
+        <a href="../writing.html">Writing</a>
+        <a href="../about.html">About</a>
+      </nav>
+
+      <article class="post-content math-note">
+        <header class="post-header">
+          <p class="eyebrow">Research Log</p>
+          <h1>Changing Variables Without Changing Probability</h1>
+          <p class="post-meta">
+            July 16, 2026 · Probability · Change of variables
+          </p>
+        </header>
+
+        <section class="post-section">
+          <h2>The Question</h2>
+          <p>
+            Given a continuous random variable \(X\) with density \(f_X\), how
+            could we derive the probability density of its transformation
+            \(g(X)\)? Formally:
+          </p>
+
+          <div class="math-block">
+            \[
+            Y=g(X),
+            \qquad
+            f_Y(y)=\;?
+            \]
+          </div>
+
+          <p>
+            Short answer: if \(g\) is differentiable and one-to-one, we map
+            \(y\) back to \(x\), evaluate the old density there, and use the
+            inverse derivative to compensate for the transformation's
+            stretching.
+          </p>
+          <p>
+            If \(x=g^{-1}(y)\), then:
+          </p>
+
+          <div class="math-block">
+            \[
+            f_Y(y)=f_X(x)\left|\frac{dx}{dy}\right|.
+            \]
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>Why I Care</h2>
+          <p>
+            The goal of generative models is to learn how to sample from
+            complex distributions, say images of cats. One approach is to learn
+            how to <strong>transform</strong> samples drawn from a familiar
+            distribution, e.g., a Gaussian distribution, into our target
+            distribution.
+          </p>
+          <p>As a concrete example:</p>
+
+          <div class="math-block">
+            \[
+            X\sim\mathcal{N}(\mu,\sigma^2),
+            \qquad
+            Y=g(X).
+            \]
+          </div>
+
+          <p>
+            We want to find a function \(g\) that transforms a sample from a
+            simple base distribution into data, such as an image of a cat.
+          </p>
+          <p>
+            I want to understand what happens to density when a transformation
+            stretches or compresses space, as a step toward making sense of
+            <em>normalizing flows</em>.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Setup and Definitions</h2>
+          <p>
+            Let's motivate the math with a concrete case. Imagine a species in
+            which the size of its members' ears determines how good they are at
+            transcribing music.
+          </p>
+          <p>
+            Usually, the population has similar ear sizes. Even so, a small
+            increase in ear size represents a huge gain in their capacity to
+            transcribe music. Indeed, we can model this by letting
+          </p>
+
+          <div class="math-block">
+            \[
+            Z\sim\mathcal{N}(0,1)
+            \]
+          </div>
+
+          <p>
+            be the standardized ear size. Here, \(Z=0\) means an average ear
+            size, and a negative \(Z\) means smaller than average—not a
+            physically negative ear. We then let
+          </p>
+
+          <div class="math-block">
+            \[
+            Y=e^Z
+            \]
+          </div>
+
+          <p>
+            be a measurement of how good they are at transcribing music. Our
+            goal is to find the PDF of \(Y\).
+          </p>
+          <p>
+            Notice that the same event should have the same probability.
+            Density is not probability by itself. In one dimension, it tells
+            us how probability is packed into length. If a transformation
+            stretches that length, the density must shrink so that the total
+            probability stays the same.
+          </p>
+          <p>For our ear-size example, this means:</p>
+
+          <div class="math-block">
+            \[
+            P(0.1\le Z\le 0.15)
+            =
+            P(e^{0.1}\le Y\le e^{0.15}).
+            \]
+          </div>
+
+          <p>
+            For this kind of transformation, the general idea is as follows:
+          </p>
+          <p>
+            Let \(X\) be a continuous random variable with PDF \(f_X\), and let
+            \(Y=g(X)\), where \(g\) is differentiable and one-to-one. If
+            \(x=g^{-1}(y)\), then the PDF of \(Y\) is:
+          </p>
+
+          <div class="math-block">
+            \[
+            f_Y(y)
+            =
+            f_X(x)\left|\frac{dx}{dy}\right|
+            =
+            f_X\!\left(g^{-1}(y)\right)
+            \left|\frac{d}{dy}g^{-1}(y)\right|.
+            \]
+          </div>
+
+          <p>In \(\mathbb{R}^n\),</p>
+
+          <div class="math-block">
+            \[
+            \mathbf{Y}=g(\mathbf{X}),
+            \qquad
+            g:\mathbb{R}^n\to\mathbb{R}^n,
+            \]
+          </div>
+
+          <p>and, if \(\mathbf{x}=g^{-1}(\mathbf{y})\),</p>
+
+          <div class="math-block">
+            \[
+            f_{\mathbf{Y}}(\mathbf{y})
+            =
+            f_{\mathbf{X}}(\mathbf{x})
+            \left|
+              \det\left(\frac{\partial\mathbf{x}}{\partial\mathbf{y}}\right)
+            \right|,
+            \]
+          </div>
+
+          <p>where</p>
+
+          <div class="math-block">
+            \[
+            \frac{\partial\mathbf{x}}{\partial\mathbf{y}}
+            =
+            \begin{bmatrix}
+            \dfrac{\partial x_1}{\partial y_1} & \cdots &
+            \dfrac{\partial x_1}{\partial y_n} \\
+            \vdots & \ddots & \vdots \\
+            \dfrac{\partial x_n}{\partial y_1} & \cdots &
+            \dfrac{\partial x_n}{\partial y_n}
+            \end{bmatrix}
+            \]
+          </div>
+
+          <p>is the Jacobian matrix of the inverse transformation.</p>
+        </section>
+
+        <section class="post-section">
+          <h2>Minimal Derivation</h2>
+          <p>
+            Let's prove the continuous case when \(g\) is strictly increasing,
+            using the cumulative distribution function (CDF):
+          </p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            F_Y(y)
+            &=P(Y\le y) \\
+            &=P(g(X)\le y) \\
+            &=P(X\le g^{-1}(y)) \\
+            &=F_X(g^{-1}(y)).
+            \end{aligned}
+            \]
+          </div>
+
+          <p>
+            Let \(x=g^{-1}(y)\). Differentiating with respect to \(y\) gives:
+          </p>
+
+          <div class="math-block">
+            \[
+            f_Y(y)=f_X(x)\frac{dx}{dy}.
+            \]
+          </div>
+
+          <p>
+            For decreasing transformations, the inequality reverses in the CDF
+            step, and the final PDF formula uses the absolute value.
+          </p>
+
+          <p>
+            We can now solve our motivating problem:
+          </p>
+          <p>
+            Let \(Z\sim\mathcal{N}(0,1)\) and \(Y=e^Z\). Then \(Y\) is
+            lognormal.
+          </p>
+          <p>
+            The inverse and its derivative are:
+          </p>
+
+          <div class="math-block">
+            \[
+            z=\log y,
+            \qquad
+            \frac{dz}{dy}=\frac{1}{y}.
+            \]
+          </div>
+
+          <p>For \(y&gt;0\), we get:</p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            f_Y(y)
+            &=f_Z(\log y)\left|\frac{dz}{dy}\right| \\
+            &=\frac{1}{\sqrt{2\pi}}
+              \exp\left(-\frac{(\log y)^2}{2}\right)\frac{1}{y}.
+            \end{aligned}
+            \]
+          </div>
+
+          <p>So:</p>
+
+          <div class="math-block">
+            \[
+            f_Y(y)
+            =
+            \frac{1}{y\sqrt{2\pi}}
+            \exp\left(-\frac{(\log y)^2}{2}\right)
+            \]
+          </div>
+
+          <p>for \(y&gt;0\), and \(f_Y(y)=0\) for \(y\le 0\).</p>
+
+          <p>
+            The Jacobian here is also interesting. The forward derivative tells
+            us how much a small interval stretches. The inverse derivative in
+            the density formula compensates for that stretch, so the same event
+            keeps the same probability. That is how the Jacobian rescues us.
+            Let's visualize this.
+          </p>
+
+          <figure class="post-figure">
+            <img
+              src="../assets/posts/lognormal-change-of-variables-probability-windows.png"
+              alt="Standard normal density at z approximately 0.69 beside the transformed lognormal density at y equals 2, with corresponding probability intervals shaded"
+            />
+            <figcaption>
+              At \(y=2\), the inverse Jacobian is \(1/2\). Locally, the
+              transformation doubles the interval's width, so the density
+              becomes half as high. The corresponding shaded regions still
+              have the same probability.
+            </figcaption>
+          </figure>
+
+          <p>
+            The polar picture shows the same idea in two dimensions. A
+            \(dr\,d\theta\) rectangle represents a wedge with area
+            \(r\,dr\,d\theta\), so the factor \(r\) is the Jacobian
+            compensating for that change in area. That is why a point uniformly
+            distributed over the unit disk has polar density
+            \(f_{R,\Theta}(r,\theta)=r/\pi\).
+          </p>
+
+          <figure class="post-figure">
+            <img
+              src="../assets/posts/cartesian-to-polar-jacobian-area.png"
+              alt="Blue wedge in a Cartesian unit disc beside its corresponding red rectangle at radius 0.65 and angle 0.85 radians in polar coordinates"
+            />
+            <figcaption>
+              Using a transformation from Cartesian to polar coordinates, the
+              blue wedge and red rectangle represent the same event, so they
+              must carry the same probability.
+            </figcaption>
+          </figure>
+        </section>
+
+        <section class="post-section">
+          <h2>What I Think I Learned</h2>
+          <p>
+            Under some mild conditions, we can compute the PDF of a transformed
+            random variable. What clicked for me is that the Jacobian is not
+            just a term in the formula: it tells us how much a transformation
+            stretches lengths or areas while preserving probability.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Open Questions</h2>
+          <ul>
+            <li>
+              How is this transformation related to linear transformations?
+            </li>
+            <li>How do normalizing flows use these ideas?</li>
+            <li>
+              If we know the source and target distributions but not \(g\), can
+              we learn the transformation?
+            </li>
+          </ul>
+        </section>
+      </article>
+
+      <p class="post-nav"><a href="../writing.html">Back to writing</a></p>
+
+      <footer class="footer">
+        <p>Find me online or get in touch.</p>
+        <div class="links">
+          <a href="https://github.com/juancopi81">GitHub</a>
+          <a href="https://huggingface.co/juancopi81">Hugging Face</a>
+          <a href="https://www.linkedin.com/in/juancarlospinerosp/">LinkedIn</a>
+          <a href="https://x.com/juancopi81">X / Twitter</a>
+          <a href="mailto:juancopi_81@hotmail.com">Email</a>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>
