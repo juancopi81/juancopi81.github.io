@@ -405,6 +405,15 @@
             the marginal score, and knowing the marginal score gives us the
             posterior mean.
           </p>
+
+          <p>
+            This inverse reading is a classical result: with \(\alpha_t = 1\),
+            it is <em>Tweedie's formula</em>. Robbins (1956) published it,
+            crediting Maurice Tweedie, and Efron (2011) gives the modern
+            treatment. Identity (4) is also the backbone of denoising score
+            matching (Vincent, 2011): a model can learn the marginal score
+            from conditional targets that we can compute in closed form.
+          </p>
         </section>
 
         <section class="post-section">
@@ -471,6 +480,25 @@
                 href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/notes/w07_conditional_expectation_in_diffusion.md"
                 >Week 7 conditional expectation in diffusion note</a
               >
+            </li>
+            <li>
+              <a
+                href="https://projecteuclid.org/ebooks/berkeley-symposium-on-mathematical-statistics-and-probability/Proceedings-of-the-Third-Berkeley-Symposium-on-Mathematical-Statistics-and/chapter/An-Empirical-Bayes-Approach-to-Statistics/bsmsp/1200501653"
+                >Robbins, An Empirical Bayes Approach to Statistics (1956)</a
+              >&mdash;where Tweedie's formula was first published.
+            </li>
+            <li>
+              <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC3325056/"
+                >Efron, Tweedie's Formula and Selection Bias (2011)</a
+              >&mdash;the modern treatment of Tweedie's formula.
+            </li>
+            <li>
+              <a
+                href="https://doi.org/10.1162/NECO_a_00142"
+                >Vincent, A Connection Between Score Matching and Denoising
+                Autoencoders (2011)</a
+              >&mdash;turns identity (4) into the denoising score matching
+              objective.
             </li>
           </ul>
         </section>

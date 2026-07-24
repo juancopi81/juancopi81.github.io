@@ -203,6 +203,13 @@
           </div>
 
           <p>
+            The quadratic form \(z^T A z\) is the squared
+            <em>Mahalanobis distance</em>: distance measured in units of the
+            distribution's own spread, which is exactly the "surprise" from
+            the examples above.
+          </p>
+
+          <p>
             Notice that the first two terms of the log PDF do not depend on
             \(x\), so they become zero when differentiating with respect to
             \(x\).
@@ -431,6 +438,20 @@
                 href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/notebooks/w05_2d_gaussian_score_field_solved.ipynb"
                 >Week 5 2-D Gaussian score field notebook</a
               >
+            </li>
+            <li>
+              <a
+                href="https://www.microsoft.com/en-us/research/publication/pattern-recognition-machine-learning/"
+                >Bishop, Pattern Recognition and Machine Learning, section
+                2.3</a
+              >&mdash;the multivariate Gaussian and its precision matrix in
+              depth.
+            </li>
+            <li>
+              <a href="https://www.math.uwaterloo.ca/~hwolkowi/matrixcookbook.pdf"
+                >Petersen &amp; Pedersen, The Matrix Cookbook</a
+              >&mdash;reference for vector-derivative identities like
+              \(\nabla_z(z^T A z) = 2Az\).
             </li>
           </ul>
         </section>
