@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Averaging Paths to the Peaks of Our Mountains | Juan Carlos</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["\\[", "\\]"]],
+        },
+        svg: {
+          fontCache: "global",
+        },
+      };
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+    ></script>
+  </head>
+  <body>
+    <main class="page post-page">
+      <nav class="nav post-nav-top">
+        <a href="../index.html">Home</a>
+        <a href="../projects.html">Projects</a>
+        <a href="../writing.html">Writing</a>
+        <a href="../about.html">About</a>
+      </nav>
+
+      <article class="post-content math-note">
+        <header class="post-header">
+          <p class="eyebrow">Research Log</p>
+          <h1>Averaging Paths to the Peaks of Our Mountains</h1>
+          <p class="post-meta">July 23, 2026 · Diffusion · Score functions</p>
+        </header>
+
+        <section class="post-section">
+          <h2>The Question</h2>
+          <p>
+            How is the marginal score related to the posterior mean of the clean
+            sample \(\mathbb{E}[x_0 \mid x_t]\)?
+          </p>
+          <p>
+            Short answer: the marginal score points from the noisy observation
+            \(x_t\) toward the scaled posterior mean
+            \(\alpha_t\mathbb{E}[x_0 \mid x_t]\), divided by the noise variance:
+          </p>
+
+          <div class="math-block">
+            \[
+            \nabla_{x_t}\log p_t(x_t)
+            =
+            \frac{\alpha_t\mathbb{E}[x_0 \mid x_t]-x_t}{\sigma_t^2}.
+            \]
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>Why I Care</h2>
+          <p>
+            In previous posts, we've been discussing the score function and the
+            posterior conditional mean. We've seen that the
+            <a href="2026-06-25-score-of-a-gaussian.html">score function</a>
+            helps find the direction that increases the log-density. On the
+            other hand,
+            <a href="2026-07-02-denoising-is-not-inversion.html">we proved</a>
+            that, under MSE, the posterior conditional mean
+            \(\mathbb{E}[x_0 \mid x_t]\) is the best estimator we could have to
+            recover \(x_0\) after seeing a specific noisy sample \(x_t\).
+          </p>
+          <p>
+            The conditional Gaussian score is easy to write down when \(x_0\)
+            is known. But during generation, \(x_0\) is exactly what we do not
+            have. We only have \(x_t\), so what we really need is the marginal
+            score.
+          </p>
+          <p>
+            Today, we'll reward our brains with a delightful connection between
+            these two concepts while we continue our quest to master
+            SotA generative models from first principles.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Setup and Definitions</h2>
+          <p>Let's revisit our forward noising formula at time \(t\):</p>
+
+          <div class="math-block">
+            \[
+            x_t=\alpha_t x_0+\sigma_t\epsilon,
+            \qquad
+            \epsilon\sim\mathcal{N}(0,I),
+            \qquad
+            \epsilon\perp x_0.
+            \]
+          </div>
+
+          <p>Here:</p>
+          <ul>
+            <li>\(x_0\) is the clean data variable.</li>
+            <li>\(x_t\) is the noisy observation at time \(t\).</li>
+            <li>\(\alpha_t\) controls how much clean signal remains.</li>
+            <li>\(\sigma_t\) controls how much Gaussian noise is added.</li>
+          </ul>
+
+          <p>
+            In the
+            <a href="2026-06-25-score-of-a-gaussian.html"
+              >“Score of a Gaussian” post</a
+            >, we derived the score function as:
+          </p>
+
+          <div class="math-block">
+            \[
+            \nabla_{x_t}\log p(x_t \mid x_0)
+            =
+            -\frac{x_t-x_0}{\sigma^2}.
+            \]
+          </div>
+
+          <p>
+            Under this Gaussian forward process, the conditional distribution
+            is:
+          </p>
+
+          <div class="math-block">
+            \[
+            p(x_t \mid x_0)
+            =
+            \mathcal{N}(\alpha_t x_0,\sigma_t^2I).
+            \]
+          </div>
+
+          <p>Its conditional score is therefore:</p>
+
+          <div class="math-block equation-numbered">
+            <div class="equation-content">
+              \[
+              \nabla_{x_t}\log p(x_t \mid x_0)
+              =
+              -\frac{x_t-\alpha_t x_0}{\sigma_t^2}.
+              \]
+            </div>
+            <span class="equation-number" aria-label="Equation 1">\((1)\)</span>
+          </div>
+
+          <p>Finally, let's recall two identities:</p>
+
+          <div class="math-block equation-numbered">
+            <div class="equation-content">
+              \[
+              \nabla_x\log f(x)
+              =
+              \frac{\nabla_x f(x)}{f(x)},
+              \]
+            </div>
+            <span class="equation-number" aria-label="Equation 2">\((2)\)</span>
+          </div>
+
+          <p>and, similarly,</p>
+
+          <div class="math-block equation-numbered">
+            <div class="equation-content">
+              \[
+              \nabla_x f(x)
+              =
+              f(x)\nabla_x\log f(x).
+              \]
+            </div>
+            <span class="equation-number" aria-label="Equation 3">\((3)\)</span>
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>Minimal Derivation</h2>
+          <p>
+            By the law of total probability, the marginal density of \(x_t\) is
+            obtained by taking a weighted average over the conditional
+            densities associated with all possible clean values \(x_0\) that
+            could have produced the observed \(x_t\). Namely:
+          </p>
+
+          <div class="math-block">
+            \[
+            p_t(x_t)
+            =
+            \int
+            p(x_t \mid x_0)p_{\text{data}}(x_0)\,dx_0.
+            \]
+          </div>
+
+          <p>We also know, by the identity in (2), that:</p>
+
+          <div class="math-block">
+            \[
+            \nabla_{x_t}\log p_t(x_t)
+            =
+            \frac{1}{p_t(x_t)}\nabla_{x_t}p_t(x_t).
+            \]
+          </div>
+
+          <p>Let's substitute the definition of \(p_t(x_t)\):</p>
+
+          <div class="math-block">
+            \[
+            \nabla_{x_t}\log p_t(x_t)
+            =
+            \frac{1}{p_t(x_t)}
+            \nabla_{x_t}
+            \int
+            p(x_t \mid x_0)p_{\text{data}}(x_0)\,dx_0.
+            \]
+          </div>
+
+          <p>
+            Assuming the usual regularity conditions, we can move the
+            derivative inside the integral:
+          </p>
+
+          <div class="math-block">
+            \[
+            \nabla_{x_t}\log p_t(x_t)
+            =
+            \frac{1}{p_t(x_t)}
+            \int
+            \nabla_{x_t}
+            \left[
+              p(x_t \mid x_0)p_{\text{data}}(x_0)
+            \right]\,dx_0.
+            \]
+          </div>
+
+          <p>
+            With respect to \(x_t\), \(p_{\text{data}}(x_0)\) is constant:
+          </p>
+
+          <div class="math-block">
+            \[
+            \nabla_{x_t}\log p_t(x_t)
+            =
+            \frac{1}{p_t(x_t)}
+            \int
+            \nabla_{x_t}p(x_t \mid x_0)
+            p_{\text{data}}(x_0)\,dx_0.
+            \]
+          </div>
+
+          <p>Using (3) from Setup and Definitions:</p>
+
+          <div class="math-block">
+            \[
+            \nabla_{x_t}p(x_t \mid x_0)
+            =
+            p(x_t \mid x_0)
+            \nabla_{x_t}\log p(x_t \mid x_0).
+            \]
+          </div>
+
+          <p>So:</p>
+
+          <div class="math-block">
+            \[
+            \nabla_{x_t}\log p_t(x_t)
+            =
+            \frac{1}{p_t(x_t)}
+            \int
+            p(x_t \mid x_0)
+            \nabla_{x_t}\log p(x_t \mid x_0)
+            p_{\text{data}}(x_0)\,dx_0.
+            \]
+          </div>
+
+          <p>Let's move the normalizing factor inside the integral:</p>
+
+          <div class="math-block">
+            \[
+            \nabla_{x_t}\log p_t(x_t)
+            =
+            \int
+            \nabla_{x_t}\log p(x_t \mid x_0)
+            \frac{
+              p(x_t \mid x_0)p_{\text{data}}(x_0)
+            }{
+              p_t(x_t)
+            }\,dx_0.
+            \]
+          </div>
+
+          <p>And we could use Bayes' rule to simplify things:</p>
+
+          <div class="math-block">
+            \[
+            p(x_0 \mid x_t)
+            =
+            \frac{
+              p(x_t \mid x_0)p_{\text{data}}(x_0)
+            }{
+              p_t(x_t)
+            }.
+            \]
+          </div>
+
+          <p>So:</p>
+
+          <div class="math-block">
+            \[
+            \nabla_{x_t}\log p_t(x_t)
+            =
+            \int
+            \nabla_{x_t}\log p(x_t \mid x_0)
+            p(x_0 \mid x_t)\,dx_0.
+            \]
+          </div>
+
+          <p>
+            Nice! This is, by definition, the conditional expectation of the
+            score function:
+          </p>
+
+          <div class="math-block equation-numbered">
+            <div class="equation-content">
+              \[
+              \nabla_{x_t}\log p_t(x_t)
+              =
+              \mathbb{E}\left[
+                \nabla_{x_t}\log p(x_t \mid x_0)
+                \mid x_t
+              \right].
+              \]
+            </div>
+            <span class="equation-number" aria-label="Equation 4">\((4)\)</span>
+          </div>
+
+          <p>
+            Equation (4) is the general identity. The clean posterior-mean
+            formula is the Gaussian bonus.
+          </p>
+
+          <p>
+            We'll now use (1) from Setup and Definitions, and the math becomes
+            straightforward:
+          </p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            \nabla_{x_t}\log p_t(x_t)
+            &=
+            \mathbb{E}\left[
+              -\frac{x_t-\alpha_t x_0}{\sigma_t^2}
+              \,\middle|\,x_t
+            \right] \\
+            &=
+            -\frac{1}{\sigma_t^2}
+            \mathbb{E}\left[
+              x_t-\alpha_t x_0
+              \mid x_t
+            \right]
+            \qquad \text{(pull out the constant)} \\
+            &=
+            -\frac{1}{\sigma_t^2}
+            \left(
+              \mathbb{E}[x_t \mid x_t]
+              -
+              \alpha_t\mathbb{E}[x_0 \mid x_t]
+            \right)
+            \qquad \text{(by linearity)} \\
+            &=
+            -\frac{1}{\sigma_t^2}
+            \left(
+              x_t-\alpha_t\mathbb{E}[x_0 \mid x_t]
+            \right)
+            \qquad \text{(given }x_t\text{, }x_t\text{ is fixed)} \\
+            &=
+            \frac{
+              \alpha_t\mathbb{E}[x_0 \mid x_t]-x_t
+            }{
+              \sigma_t^2
+            }.
+            \end{aligned}
+            \]
+          </div>
+
+          <p>Reading the same identity in the other direction gives us:</p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}[x_0 \mid x_t]
+            =
+            \frac{
+              x_t+\sigma_t^2\nabla_{x_t}\log p_t(x_t)
+            }{
+              \alpha_t
+            },
+            \qquad
+            \alpha_t\ne 0.
+            \]
+          </div>
+
+          <p>
+            So, for a fixed noise schedule, knowing the posterior mean gives us
+            the marginal score, and knowing the marginal score gives us the
+            posterior mean.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Visualizing the Average Arrow</h2>
+          <p>
+            The derivation says that the marginal score is a
+            posterior-weighted average of local conditional scores. This
+            playground lets us move \(x_t\) and watch those arrows and their
+            weights change. To make that average visible, we'll replace the
+            integral with only three equally likely clean origins.
+          </p>
+
+          <div class="interactive-breakout">
+            <iframe
+              class="posterior-score-playground-frame"
+              data-posterior-score-playground
+              src="../assets/posts/posterior-score-arrows-playground.html"
+              title="Interactive posterior-weighted score arrows playground"
+              loading="lazy"
+              scrolling="no"
+            ></iframe>
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>What I Think I Learned</h2>
+          <p>
+            I find myself in a valley surrounded by mountains. I know that I
+            got to my current position walking from one of the peaks of the many
+            possible mountains, but which one?
+          </p>
+          <p>
+            The key insight from formula (4) is that, at my current position,
+            every possible peak gives me a local uphill arrow. The score
+            averages those arrows, weighted by how <em>probable</em> each clean
+            origin looks after observing \(x_t\). A full path appears only if I
+            move, recompute the score, and keep going.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Open Questions</h2>
+          <ul>
+            <li>
+              MSE targets the posterior mean. What estimator would MAE target
+              instead?
+            </li>
+            <li>
+              How do neural networks help us when
+              \(\mathbb{E}[x_0 \mid x_t]\) is not tractable?
+            </li>
+            <li>
+              If the posterior mean and score determine each other, why might
+              we prefer to train for one rather than the other?
+            </li>
+          </ul>
+        </section>
+
+        <section class="post-section">
+          <h2>References</h2>
+          <ul class="references">
+            <li>
+              <a
+                href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/notes/w07_conditional_expectation_in_diffusion.md"
+                >Week 7 conditional expectation in diffusion note</a
+              >
+            </li>
+          </ul>
+        </section>
+      </article>
+
+      <p class="post-nav"><a href="../writing.html">Back to writing</a></p>
+
+      <footer class="footer">
+        <p>Find me online or get in touch.</p>
+        <div class="links">
+          <a href="https://github.com/juancopi81">GitHub</a>
+          <a href="https://huggingface.co/juancopi81">Hugging Face</a>
+          <a href="https://www.linkedin.com/in/juancarlospinerosp/">LinkedIn</a>
+          <a href="https://x.com/juancopi81">X / Twitter</a>
+          <a href="mailto:juancopi_81@hotmail.com">Email</a>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      const posteriorScorePlayground = document.querySelector(
+        "[data-posterior-score-playground]",
+      );
+
+      window.addEventListener("message", (event) => {
+        if (
+          !posteriorScorePlayground ||
+          event.source !== posteriorScorePlayground.contentWindow ||
+          event.data?.type !== "posterior-score-playground:resize"
+        ) {
+          return;
+        }
+
+        const requestedHeight = Number(event.data.height);
+        if (!Number.isFinite(requestedHeight)) return;
+
+        const frameHeight = Math.max(780, Math.min(requestedHeight + 2, 2400));
+        posteriorScorePlayground.style.height = `${frameHeight}px`;
+      });
+    </script>
+  </body>
+</html>

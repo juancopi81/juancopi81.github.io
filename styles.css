@@ -296,6 +296,23 @@ code {
   margin: 0;
 }
 
+.math-block.equation-numbered {
+  align-items: center;
+  column-gap: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  overflow-x: visible;
+}
+
+.equation-numbered .equation-content {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.equation-numbered .equation-number {
+  white-space: nowrap;
+}
+
 .post-figure {
   margin: 24px 0;
 }
@@ -327,6 +344,15 @@ code {
   border-radius: 8px;
   display: block;
   min-height: 920px;
+  width: 100%;
+}
+
+.posterior-score-playground-frame {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: block;
+  min-height: 1040px;
   width: 100%;
 }
 
@@ -392,6 +418,10 @@ code {
 
   .score-playground-frame {
     min-height: 1600px;
+  }
+
+  .posterior-score-playground-frame {
+    min-height: 1460px;
   }
 
   .footer {

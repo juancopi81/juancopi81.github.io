@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Average the Local Score Arrows</title>
+    <style>
+      :root {
+        --bg: #fafafa;
+        --panel: #fff;
+        --text: #18181b;
+        --muted: #71717a;
+        --accent: #2563eb;
+        --accent-soft: #eff6ff;
+        --line: #e4e4e7;
+        --subtle: #f4f4f5;
+        --point: #dc2626;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        color: var(--text);
+        background: var(--bg);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+          BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+      button, input { font: inherit; }
+      button:focus-visible, input:focus-visible, canvas:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .wrap { max-width: 1100px; margin: 0 auto; padding: 20px; }
+      h1 { margin: 0 0 6px; font-size: 22px; line-height: 1.25; }
+      h2 { margin: 0; font-size: 17px; line-height: 1.35; }
+      .subtitle {
+        max-width: 850px;
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 15px;
+      }
+      .panel {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 120px;
+        gap: 14px;
+        align-items: end;
+        margin-bottom: 14px;
+      }
+      .label-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 6px;
+      }
+      label { font-size: 14px; font-weight: 650; }
+      output {
+        color: var(--muted);
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+      }
+      input[type="range"] { width: 100%; accent-color: var(--accent); }
+      button {
+        width: 100%;
+        min-height: 40px;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        color: var(--text);
+        background: var(--subtle);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 650;
+      }
+      button:hover { border-color: #a1a1aa; }
+      .fixed {
+        grid-column: 1 / -1;
+        margin: -4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .chart-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 9px;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px 13px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .legend span { display: inline-flex; align-items: center; gap: 5px; }
+      .legend i {
+        width: 13px;
+        height: 3px;
+        border-radius: 99px;
+        background: currentColor;
+      }
+      .legend .point i { width: 9px; height: 9px; border-radius: 50%; }
+      canvas {
+        display: block;
+        width: 100%;
+        min-height: 405px;
+        aspect-ratio: 11 / 5;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+        cursor: ew-resize;
+        touch-action: none;
+      }
+      .help { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+      .results {
+        display: grid;
+        grid-template-columns: minmax(0, 1.12fr) minmax(280px, 0.88fr);
+        gap: 14px;
+        margin-top: 14px;
+      }
+      .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .metric {
+        min-width: 0;
+        padding: 9px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--subtle);
+      }
+      .metric small { display: block; color: var(--muted); font-size: 12px; }
+      .metric strong {
+        font-size: 17px;
+        font-variant-numeric: tabular-nums;
+        overflow-wrap: anywhere;
+      }
+      .callout {
+        margin-top: 10px;
+        padding: 10px 11px;
+        border: 1px solid #bfdbfe;
+        border-radius: 6px;
+        background: var(--accent-soft);
+        font-size: 14px;
+      }
+      .callout strong { color: #1d4ed8; }
+      .identity {
+        margin-top: 10px;
+        padding-top: 9px;
+        border-top: 1px solid var(--line);
+        font-size: 13px;
+      }
+      .identity-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 4px;
+      }
+      .identity-row span:first-child { color: var(--muted); }
+      .identity-row b { font-variant-numeric: tabular-nums; }
+      .check { margin-top: 4px; color: #15803d; font-size: 12px; font-weight: 650; }
+      .weights h2 { margin-bottom: 9px; }
+      .weight-row {
+        display: grid;
+        grid-template-columns: 9px 52px minmax(75px, 1fr) 46px;
+        gap: 8px;
+        align-items: center;
+        margin: 9px 0 0;
+        font-size: 13px;
+      }
+      .weight-row b { color: var(--text); }
+      .dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+      .bar { height: 7px; overflow: hidden; border-radius: 99px; background: var(--subtle); }
+      .bar i {
+        display: block;
+        width: 0;
+        height: 100%;
+        border-radius: inherit;
+        background: currentColor;
+      }
+      .percent { color: var(--muted); text-align: right; font-size: 12px; }
+      .detail {
+        grid-column: 2 / -1;
+        margin-top: -7px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+      }
+      @media (max-width: 740px) {
+        .controls { grid-template-columns: 1fr 1fr; }
+        .controls button, .fixed { grid-column: 1 / -1; }
+        .chart-top { display: block; }
+        .legend { justify-content: flex-start; margin-top: 8px; }
+        .results { grid-template-columns: 1fr; }
+        canvas { aspect-ratio: auto; min-height: 440px; }
+      }
+      @media (max-width: 500px) {
+        .wrap { padding: 14px; }
+        .controls { grid-template-columns: 1fr; }
+        .controls button, .fixed { grid-column: auto; }
+        .metrics { grid-template-columns: 1fr; }
+        .metric { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+        .metric small { display: inline; }
+        .identity-row { display: block; }
+        .identity-row b { display: block; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Average the Local Score Arrows</h1>
+      <p class="subtitle">
+        One noisy observation could have come from several clean peaks. Move
+        <i>x</i><sub>t</sub> and watch the posterior weights decide how much
+        each local conditional score contributes to the marginal score.
+      </p>
+
+      <div class="panel controls">
+        <div>
+          <div class="label-row">
+            <label for="observation">Noisy observation <i>x</i><sub>t</sub></label>
+            <output id="observationValue" for="observation">1.00</output>
+          </div>
+          <input id="observation" type="range" min="-4" max="4" value="1" step="0.01" />
+        </div>
+        <div>
+          <div class="label-row">
+            <label for="noise">Noise level <i>σ</i><sub>t</sub></label>
+            <output id="noiseValue" for="noise">1.00</output>
+          </div>
+          <input id="noise" type="range" min="0.45" max="2" value="1" step="0.01" />
+        </div>
+        <button id="reset" type="button">Reset</button>
+        <p class="fixed">
+          Fixed here: <i>α</i><sub>t</sub>=0.85 and three equally likely clean
+          origins <i>x</i><sub>0</sub>∈{−3, 0, 3}.
+        </p>
+      </div>
+
+      <div class="panel">
+        <div class="chart-top">
+          <h2>One observation, three possible peaks</h2>
+          <div class="legend" aria-label="Chart legend">
+            <span style="color:#7c3aed"><i></i>Peak 1</span>
+            <span style="color:#d97706"><i></i>Peak 2</span>
+            <span style="color:#16a34a"><i></i>Peak 3</span>
+            <span style="color:#2563eb"><i></i>Marginal</span>
+            <span class="point" style="color:#dc2626"><i></i>Observed <em>x</em><sub>t</sub></span>
+          </div>
+        </div>
+        <canvas
+          id="chart"
+          width="1040"
+          height="470"
+          tabindex="0"
+          role="img"
+          aria-describedby="help liveSummary"
+          aria-label="Interactive chart of three relative Gaussian density curves and their local score arrows"
+        ></canvas>
+        <p class="help" id="help">
+          The curves show relative conditional and marginal densities. Drag the
+          red observation, or use the slider. Thin arrows are the conditional
+          scores; their opacity follows the posterior weights. All arrows share
+          one display scale at the current <i>x</i><sub>t</sub>. When the chart
+          is focused, the left and right arrow keys also move it.
+        </p>
+      </div>
+
+      <div class="results">
+        <div class="panel">
+          <div class="metrics">
+            <div class="metric"><small>Posterior mean</small><strong id="posteriorMean">0.000</strong></div>
+            <div class="metric"><small>Marginal score</small><strong id="marginalScore">0.000</strong></div>
+            <div class="metric"><small>Strongest candidate</small><strong id="strongest">Peak 2</strong></div>
+          </div>
+          <div class="callout">
+            <strong>The blue arrow is local, not a complete path.</strong>
+            <span id="direction">It points left here.</span> Move
+            <i>x</i><sub>t</sub>, and the weights and average arrow change.
+          </div>
+          <div class="identity">
+            <h2>The two routes agree</h2>
+            <div class="identity-row">
+              <span>Σ<sub>i</sub> p(<i>x</i><sub>0</sub><sup>(i)</sup> | <i>x</i><sub>t</sub>)s<sub>i</sub></span>
+              <b id="weightedScore">0.000000</b>
+            </div>
+            <div class="identity-row">
+              <span>(<i>α</i><sub>t</sub>E[<i>x</i><sub>0</sub> | <i>x</i><sub>t</sub>] − <i>x</i><sub>t</sub>) / <i>σ</i><sub>t</sub><sup>2</sup></span>
+              <b id="meanScore">0.000000</b>
+            </div>
+            <div class="check" id="check">Numerical difference: 0.00e+0</div>
+          </div>
+        </div>
+
+        <div class="panel weights">
+          <h2>Posterior weights and local scores</h2>
+          <div id="weightRows"></div>
+        </div>
+      </div>
+      <p class="sr-only" id="liveSummary" aria-live="polite"></p>
+    </div>
+
+    <script>
+      const ALPHA = 0.85;
+      const ORIGINS = [-3, 0, 3];
+      const COLORS = ["#7c3aed", "#d97706", "#16a34a"];
+      const DOMAIN = [-5.5, 5.5];
+      const $ = (id) => document.getElementById(id);
+      const el = {
+        x: $("observation"), sigma: $("noise"), xValue: $("observationValue"),
+        sigmaValue: $("noiseValue"), reset: $("reset"), chart: $("chart"),
+        posteriorMean: $("posteriorMean"), marginalScore: $("marginalScore"),
+        strongest: $("strongest"), direction: $("direction"),
+        weightedScore: $("weightedScore"), meanScore: $("meanScore"),
+        check: $("check"), weightRows: $("weightRows"), live: $("liveSummary"),
+      };
+
+      el.weightRows.innerHTML = ORIGINS.map((origin, i) => `
+        <div class="weight-row" style="color:${COLORS[i]}">
+          <span class="dot" aria-hidden="true"></span>
+          <b>Peak ${i + 1}</b>
+          <span class="bar"><i id="bar${i}"></i></span>
+          <span class="percent" id="percent${i}">0.0%</span>
+          <span class="detail" id="detail${i}">x₀=${origin} · local score 0.000</span>
+        </div>
+      `).join("");
+
+      function fmt(value, digits = 2) {
+        const rounded = Math.abs(value) < 0.5 * 10 ** -digits ? 0 : value;
+        return rounded.toFixed(digits);
+      }
+
+      function kernel(x, mean, sigma) {
+        const z = (x - mean) / sigma;
+        return Math.exp(-0.5 * z * z);
+      }
+
+      function getState() {
+        const x = Number(el.x.value);
+        const sigma = Number(el.sigma.value);
+        const means = ORIGINS.map((origin) => ALPHA * origin);
+        const likelihoods = means.map((mean) => kernel(x, mean, sigma));
+        const total = likelihoods.reduce((sum, value) => sum + value, 0);
+        const weights = likelihoods.map((value) => value / total);
+        const scores = means.map((mean) => (mean - x) / sigma ** 2);
+        const posteriorMean = weights.reduce(
+          (sum, weight, i) => sum + weight * ORIGINS[i], 0
+        );
+        const weightedScore = weights.reduce(
+          (sum, weight, i) => sum + weight * scores[i], 0
+        );
+        const meanScore = (ALPHA * posteriorMean - x) / sigma ** 2;
+        const strongest = weights.indexOf(Math.max(...weights));
+        return { x, sigma, means, weights, scores, posteriorMean, weightedScore, meanScore, strongest };
+      }
+
+      function arrow(ctx, x1, x2, y, color, width, opacity) {
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        ctx.strokeStyle = ctx.fillStyle = color;
+        ctx.lineWidth = width;
+        ctx.lineCap = "round";
+        if (Math.abs(x2 - x1) < 1.5) {
+          ctx.beginPath(); ctx.arc(x1, y, Math.max(2.5, width), 0, Math.PI * 2); ctx.fill();
+        } else {
+          const sign = Math.sign(x2 - x1);
+          const head = Math.min(10, Math.abs(x2 - x1) * 0.38);
+          ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x2, y);
+          ctx.lineTo(x2 - sign * head, y - 5);
+          ctx.lineTo(x2 - sign * head, y + 5);
+          ctx.closePath(); ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function draw(state) {
+        const canvas = el.chart;
+        const ctx = canvas.getContext("2d");
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.max(1, window.devicePixelRatio || 1);
+        const width = Math.max(300, rect.width);
+        const height = Math.max(405, rect.height);
+        if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
+          canvas.width = Math.round(width * dpr);
+          canvas.height = Math.round(height * dpr);
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, width, height);
+
+        const compact = width < 550;
+        const plot = { left: compact ? 34 : 47, right: width - 16, top: 30, bottom: compact ? 222 : 217 };
+        const plotWidth = plot.right - plot.left;
+        const px = (x) => plot.left + (x - DOMAIN[0]) / (DOMAIN[1] - DOMAIN[0]) * plotWidth;
+        const py = (density) => plot.bottom - density * (plot.bottom - plot.top - 12);
+
+        ctx.strokeStyle = "#f1f5f9";
+        ctx.lineWidth = 1;
+        for (let tick = -5; tick <= 5; tick++) {
+          ctx.beginPath(); ctx.moveTo(px(tick), plot.top); ctx.lineTo(px(tick), plot.bottom); ctx.stroke();
+        }
+
+        const samples = 240;
+        state.means.forEach((mean, i) => {
+          ctx.save();
+          ctx.fillStyle = ctx.strokeStyle = COLORS[i];
+          ctx.globalAlpha = 0.13;
+          ctx.beginPath(); ctx.moveTo(px(DOMAIN[0]), plot.bottom);
+          for (let n = 0; n <= samples; n++) {
+            const x = DOMAIN[0] + (DOMAIN[1] - DOMAIN[0]) * n / samples;
+            ctx.lineTo(px(x), py(kernel(x, mean, state.sigma)));
+          }
+          ctx.lineTo(px(DOMAIN[1]), plot.bottom); ctx.closePath(); ctx.fill();
+          ctx.globalAlpha = 0.72; ctx.lineWidth = 1.6; ctx.stroke(); ctx.restore();
+        });
+
+        ctx.save();
+        ctx.strokeStyle = "#2563eb"; ctx.lineWidth = 3; ctx.beginPath();
+        for (let n = 0; n <= samples; n++) {
+          const x = DOMAIN[0] + (DOMAIN[1] - DOMAIN[0]) * n / samples;
+          const density = state.means.reduce(
+            (sum, mean) => sum + kernel(x, mean, state.sigma) / 3, 0
+          );
+          if (n === 0) ctx.moveTo(px(x), py(density));
+          else ctx.lineTo(px(x), py(density));
+        }
+        ctx.stroke(); ctx.restore();
+
+        ctx.save();
+        ctx.strokeStyle = "#a1a1aa"; ctx.fillStyle = "#71717a"; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(plot.left, plot.bottom); ctx.lineTo(plot.right, plot.bottom); ctx.stroke();
+        ctx.font = `${compact ? 10 : 11}px system-ui`; ctx.textAlign = "center";
+        for (let tick = -5; tick <= 5; tick++) {
+          ctx.beginPath(); ctx.moveTo(px(tick), plot.bottom); ctx.lineTo(px(tick), plot.bottom + 4); ctx.stroke();
+          ctx.fillText(String(tick), px(tick), plot.bottom + 17);
+        }
+        ctx.fillText("noisy space", (plot.left + plot.right) / 2, plot.bottom + 33);
+        ctx.restore();
+
+        state.means.forEach((mean, i) => {
+          ctx.save();
+          ctx.fillStyle = COLORS[i];
+          ctx.beginPath(); ctx.arc(px(mean), py(1), 4.5, 0, Math.PI * 2); ctx.fill();
+          ctx.font = `600 ${compact ? 10 : 11}px system-ui`; ctx.textAlign = "center";
+          ctx.fillText(`αx₀${i + 1}`, px(mean), py(1) - 10); ctx.restore();
+        });
+
+        const currentX = px(state.x);
+        ctx.save();
+        ctx.strokeStyle = ctx.fillStyle = "#dc2626"; ctx.lineWidth = 1.6; ctx.setLineDash([5, 4]);
+        ctx.beginPath(); ctx.moveTo(currentX, plot.top); ctx.lineTo(currentX, plot.bottom); ctx.stroke();
+        ctx.setLineDash([]); ctx.beginPath(); ctx.arc(currentX, plot.bottom, 5.5, 0, Math.PI * 2); ctx.fill();
+        ctx.font = `700 ${compact ? 10 : 11}px system-ui`;
+        ctx.textAlign = state.x > 3.4 ? "right" : state.x < -3.4 ? "left" : "center";
+        ctx.fillText("observed xₜ", currentX, plot.top - 10); ctx.restore();
+
+        const laneScores = [...state.scores, state.weightedScore];
+        const maximum = Math.max(0.01, ...laneScores.map(Math.abs));
+        const displayScale = 1.35 / maximum;
+        const firstLane = compact ? 273 : 266;
+        const gap = compact ? 41 : 38;
+        laneScores.forEach((score, i) => {
+          const average = i === 3;
+          const y = firstLane + i * gap;
+          ctx.save();
+          ctx.strokeStyle = "#f1f5f9"; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(plot.left, y); ctx.lineTo(plot.right, y); ctx.stroke();
+          ctx.fillStyle = average ? "#2563eb" : "#71717a";
+          ctx.font = `${average ? 700 : 500} ${compact ? 10 : 11}px system-ui`;
+          const label = average ? "posterior average" : `score from peak ${i + 1} · w=${Math.round(state.weights[i] * 100)}%`;
+          ctx.fillText(label, plot.left, y - 8); ctx.restore();
+          arrow(
+            ctx, currentX, px(state.x + score * displayScale), y,
+            average ? "#2563eb" : COLORS[i], average ? 4 : 2.2,
+            average ? 1 : Math.max(0.23, 0.28 + state.weights[i] * 0.72)
+          );
+        });
+      }
+
+      function update() {
+        const state = getState();
+        el.xValue.value = fmt(state.x);
+        el.sigmaValue.value = fmt(state.sigma);
+        el.posteriorMean.textContent = fmt(state.posteriorMean, 3);
+        el.marginalScore.textContent = fmt(state.weightedScore, 3);
+        el.strongest.textContent = `Peak ${state.strongest + 1}`;
+        el.weightedScore.textContent = fmt(state.weightedScore, 6);
+        el.meanScore.textContent = fmt(state.meanScore, 6);
+        el.check.textContent = `Numerical difference: ${Math.abs(state.weightedScore - state.meanScore).toExponential(2)}`;
+        const direction = Math.abs(state.weightedScore) < 0.015
+          ? "The competing arrows nearly cancel here."
+          : `It points ${state.weightedScore > 0 ? "right" : "left"} here.`;
+        el.direction.textContent = direction;
+        state.weights.forEach((weight, i) => {
+          $(`bar${i}`).style.width = `${weight * 100}%`;
+          $(`percent${i}`).textContent = `${(weight * 100).toFixed(1)}%`;
+          $(`detail${i}`).textContent = `x₀=${ORIGINS[i]} · local score ${fmt(state.scores[i], 3)}`;
+        });
+        const summary = `At x t ${fmt(state.x)}, Peak ${state.strongest + 1} has the largest posterior weight. The marginal score is ${fmt(state.weightedScore, 3)}. ${direction}`;
+        el.live.textContent = summary;
+        el.chart.setAttribute(
+          "aria-label",
+          `${summary} The chart shows three relative Gaussian density curves and their local score arrows.`
+        );
+        draw(state);
+      }
+
+      function moveFromPointer(event) {
+        const rect = el.chart.getBoundingClientRect();
+        const compact = rect.width < 550;
+        const left = compact ? 34 : 47;
+        const right = rect.width - 16;
+        const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left - left) / (right - left)));
+        const proposed = DOMAIN[0] + ratio * (DOMAIN[1] - DOMAIN[0]);
+        el.x.value = Math.max(Number(el.x.min), Math.min(Number(el.x.max), proposed)).toFixed(2);
+        update();
+      }
+
+      let dragging = false;
+      el.chart.addEventListener("pointerdown", (event) => {
+        dragging = true;
+        el.chart.setPointerCapture(event.pointerId);
+        moveFromPointer(event);
+      });
+      el.chart.addEventListener("pointermove", (event) => {
+        if (dragging) moveFromPointer(event);
+      });
+      el.chart.addEventListener("pointerup", (event) => {
+        dragging = false;
+        if (el.chart.hasPointerCapture(event.pointerId)) el.chart.releasePointerCapture(event.pointerId);
+      });
+      el.chart.addEventListener("pointercancel", () => { dragging = false; });
+      el.chart.addEventListener("keydown", (event) => {
+        if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+        event.preventDefault();
+        const next = Number(el.x.value) + (event.key === "ArrowRight" ? 0.1 : -0.1);
+        el.x.value = Math.max(Number(el.x.min), Math.min(Number(el.x.max), next)).toFixed(2);
+        update();
+      });
+      [el.x, el.sigma].forEach((input) => input.addEventListener("input", update));
+      el.reset.addEventListener("click", () => {
+        el.x.value = 1;
+        el.sigma.value = 1;
+        update();
+        el.x.focus();
+      });
+
+      let resizeFrame = 0;
+      function resize() {
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(update);
+      }
+      if ("ResizeObserver" in window) new ResizeObserver(resize).observe(el.chart);
+      else window.addEventListener("resize", resize);
+
+      function reportHeight() {
+        if (window.parent === window) return;
+        const height = Math.ceil(document.querySelector(".wrap").getBoundingClientRect().height);
+        window.parent.postMessage({ type: "posterior-score-playground:resize", height }, "*");
+      }
+      window.addEventListener("load", reportHeight);
+      if ("ResizeObserver" in window) new ResizeObserver(reportHeight).observe(document.body);
+      update();
+      setTimeout(reportHeight, 100);
+    </script>
+  </body>
+</html>
