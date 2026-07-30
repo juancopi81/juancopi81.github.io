@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Two Ways to Learn the Same Score Field | Juan Carlos</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["\\[", "\\]"]],
+        },
+        svg: {
+          fontCache: "global",
+        },
+      };
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+    ></script>
+  </head>
+  <body>
+    <main class="page post-page">
+      <nav class="nav post-nav-top">
+        <a href="../index.html">Home</a>
+        <a href="../projects.html">Projects</a>
+        <a href="../writing.html">Writing</a>
+        <a href="../about.html">About</a>
+      </nav>
+
+      <article class="post-content math-note">
+        <header class="post-header">
+          <p class="eyebrow">Research Log</p>
+          <h1>Two Ways to Learn the Same Score Field</h1>
+          <p class="post-meta">July 30, 2026 · Diffusion · Score matching</p>
+        </header>
+
+        <section class="post-section">
+          <p>
+            The entries in this research log have been mainly theoretical,
+            around the math used in generative models, with a specific emphasis
+            on score-based and diffusion models. Today, I wanted to present a
+            small experiment centered around ideas discussed in previous entries.
+            In particular, the goal is to train a first toy model to learn the
+            score function with two different approaches.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Context</h2>
+          <p>
+            During previous entries, I've been trying to build the ideas in an
+            order that makes it feel natural to move from conditional
+            probability and the score function toward training a model that can
+            eventually help generate data. In particular,
+            <a
+              href="2026-07-23-averaging-paths-to-the-peaks-of-our-mountains.html"
+              >last week's entry</a
+            >
+            ended with questions about how to train a model when the posterior
+            mean is intractable, including which approach is better: training a
+            clean-sample predictor or training with a conditional-score target.
+          </p>
+          <p>
+            Based on that, today's experiment is about training a very simple
+            neural network that would either be trained to predict the observed
+            clean sample \(x_0\), whose MSE-optimal predictor from \(x_t\) is the
+            posterior mean \(\mathbb{E}[x_0 \mid x_t]\), or be trained to predict
+            a conditional-score target. Then, we compare the results against
+            the analytical score, i.e., the ground-truth marginal score we can
+            calculate exactly.
+          </p>
+          <p>
+            The code and full report are available in the
+            <a
+              href="https://github.com/juancopi81/diffusion-research-curriculum/tree/main/mini_projects/checkpoint_02_toy_score_matching"
+              >toy score-matching checkpoint</a
+            >.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Setup</h2>
+          <p>
+            It was important for me to keep everything simple, so the key ideas
+            of the experiment remain accessible and are not obscured by
+            considerations required in real-world settings. In that spirit, the
+            model and dataset are very basic, but enough for our purposes.
+          </p>
+          <p>
+            To make the experiment concrete, both runs used the same setup; only
+            the training target changed:
+          </p>
+          <ul>
+            <li>
+              <strong>Model:</strong> A small PyTorch MLP that maps a
+              two-dimensional noisy point to a two-dimensional output, with two
+              hidden layers of 32 neurons and ReLU activations.
+            </li>
+            <li>
+              <strong>Training:</strong> Full-batch SGD with a learning rate of
+              \(0.1\), MSE loss, and 20 optimizer updates.
+            </li>
+            <li>
+              <strong>Dataset:</strong> 1,500 two-dimensional samples generated
+              with scikit-learn's <code>make_blobs</code>, split into 1,200
+              training and 300 validation samples.
+            </li>
+            <li>
+              <strong>Scope:</strong> The model learns at one fixed Gaussian
+              noise level, \(\sigma=0.5\). It does not receive \(t\) as an
+              input, so this is not yet a full diffusion model.
+            </li>
+          </ul>
+          <p>
+            Also, the dataset was generated synthetically so that we know its
+            PDF and, therefore, can compute its exact score and compare it to the
+            model's result.
+          </p>
+          <p>
+            Following the idea of three possible <em>peaks</em> from the
+            previous entry, the dataset was generated as an equal-weight
+            mixture of three Gaussian <em>mountains</em>. Each clean component
+            has standard deviation \(\tau=0.5\) and is centered at:
+          </p>
+
+          <div class="math-block">
+            \[
+            \mu_1=(-2,-2),
+            \qquad
+            \mu_2=(0,2),
+            \qquad
+            \mu_3=(2,-1).
+            \]
+          </div>
+
+          <div class="math-block">
+            \[
+            x_0
+            \sim
+            \frac{1}{3}\sum_{k=1}^{3}
+            \mathcal{N}(\mu_k,\tau^2 I),
+            \qquad
+            \tau=0.5.
+            \]
+          </div>
+
+          <p>
+            We sampled points from these <em>hills</em> and implemented a basic
+            fixed-noise corruption process:
+          </p>
+
+          <div class="math-block">
+            \[
+            x_t=x_0+\sigma\epsilon,
+            \qquad
+            \epsilon\sim\mathcal{N}(0,I),
+            \qquad
+            \sigma=0.5.
+            \]
+          </div>
+
+          <p>
+            Adding Gaussian noise to a Gaussian produces a new Gaussian, so we
+            know the resulting noisy distribution. Each noisy component has
+            total variance \(v_t^2=\tau^2+\sigma^2\), and we can calculate the
+            exact score at any point \(x\):
+          </p>
+
+          <div class="math-block">
+            \[
+            \nabla_x\log p_t(x)
+            =
+            \sum_{k=1}^{3}
+            r_k(x)\frac{\mu_k-x}{v_t^2}.
+            \]
+          </div>
+
+          <p>
+            Here, \(r_k(x)\) is the posterior responsibility of component
+            \(k\): the probability that the observed point \(x\) came from
+            Gaussian <em>mountain</em> \(k\).
+          </p>
+          <p>
+            Having the exact score is highly beneficial for testing whether our
+            model was learning and how close its result was. For the \(x_0\)
+            objective, we use the relation:
+          </p>
+
+          <div class="math-block">
+            \[
+            \nabla_{x_t}\log p_t(x_t)
+            =
+            \frac{\mathbb{E}[x_0 \mid x_t]-x_t}{\sigma^2}.
+            \]
+          </div>
+
+          <p>
+            <strong>Note:</strong> The formula uses the posterior mean
+            \(\mathbb{E}[x_0 \mid x_t]\), but we do not need to calculate that
+            mean and provide it as a label. Instead, the model trains on many
+            noisy-clean pairs \((x_t, x_0)\). Under MSE, the best prediction for
+            a noisy point is the average of the clean values that could have
+            produced it. That average is exactly the posterior mean. This is
+            why the training code uses <code>target = train_x0</code>. We
+            developed this MSE argument in
+            <a href="2026-07-02-denoising-is-not-inversion.html"
+              >Denoising Is Not Inversion</a
+            >.
+          </p>
+
+          <p>
+            We provided the
+            <a
+              href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/mini_projects/checkpoint_02_toy_score_matching/train.py#L131-L135"
+              >training script</a
+            >
+            with two objectives: an \(x_0\) objective and a conditional-score
+            objective:
+          </p>
+
+          <div class="code-sample">
+            <div class="code-sample-header">
+              <span>train.py</span>
+              <span>lines 131–135</span>
+            </div>
+            <pre><code>if TRAIN_CONFIG["objective"] == "x0":
+    target = train_x0
+elif TRAIN_CONFIG["objective"] == "score":
+    # Conditional Gaussian score target: -(xt - x0) / sigma^2.
+    target = -(train_xt - train_x0) / FORWARD_SIGMA**2</code></pre>
+          </div>
+
+          <p>
+            <strong>Note:</strong> The conditional-score objective does not use
+            the analytical marginal score as its label. For each noisy-clean
+            pair, it uses \((x_0-x_t)/\sigma^2\). Under MSE, the model learns the
+            average of these targets for a given \(x_t\), and that average is
+            the marginal score.
+          </p>
+
+          <p>
+            Then, we
+            <a
+              href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/mini_projects/checkpoint_02_toy_score_matching/evaluate.py#L77-L81"
+              >evaluated the model</a
+            >
+            based on the objective it was trained on:
+          </p>
+
+          <div class="code-sample">
+            <div class="code-sample-header">
+              <span>evaluate.py</span>
+              <span>lines 77–81</span>
+            </div>
+            <pre><code>if objective == "x0":
+    # Tweedie's identity converts E[x0 | xt] to the marginal score.
+    scores = (predictions - noisy_points) / forward_sigma**2
+elif objective == "score":
+    scores = predictions</code></pre>
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>Results</h2>
+          <p>
+            In this experiment, using the same architecture, learning rate, and
+            budget of 20 optimizer updates, the \(x_0\) objective achieved a
+            lower validation score MSE than the conditional-score objective.
+          </p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Objective</th>
+                  <th>Final validation objective loss</th>
+                  <th>Validation score MSE</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>\(x_0\)</td>
+                  <td>0.181885</td>
+                  <td>0.727958</td>
+                </tr>
+                <tr>
+                  <td>Conditional score</td>
+                  <td>3.472780</td>
+                  <td>1.407152</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            The two objective-loss values live in different target spaces, so
+            they should not be compared directly across rows. The validation
+            score MSE is the shared metric for both models.
+          </p>
+
+          <p>
+            At the ideal
+            <a
+              href="https://classic.d2l.ai/chapter_multilayer-perceptrons/environment.html#empirical-risk-and-risk"
+              >population optimum</a
+            >—the function that minimizes expected loss over the full data
+            distribution—both objectives recover the same marginal score
+            field. This single run only shows that, under this architecture,
+            target scaling, and training budget, the \(x_0\) route was easier
+            to optimize.
+          </p>
+
+          <p>
+            Here, the validation score MSE is the mean squared error between the
+            score inferred by the model and the exact score, using data not seen
+            during training.
+          </p>
+
+          <figure class="post-figure">
+            <img
+              src="../assets/posts/toy-score-analytical-vector-field.png"
+              alt="Analytical score vector field over clean samples from the three-component Gaussian mixture"
+            />
+            <figcaption>
+              True analytical score vector field for the noisy
+              three-component Gaussian mixture.
+            </figcaption>
+          </figure>
+
+          <figure class="post-figure">
+            <img
+              src="../assets/posts/toy-score-x0-objective-vector-field.png"
+              alt="Predicted score vector field from the model trained with the x0 objective"
+            />
+            <figcaption>
+              Predicted score vector field from the model trained with the
+              \(x_0\) objective.
+            </figcaption>
+          </figure>
+
+          <figure class="post-figure">
+            <img
+              src="../assets/posts/toy-score-direct-objective-vector-field.png"
+              alt="Predicted score vector field from the model trained with the conditional-score objective"
+            />
+            <figcaption>
+              Predicted score vector field from the model trained with the
+              conditional-score objective.
+            </figcaption>
+          </figure>
+
+          <p>
+            These results show just one specific experiment where the model was
+            trained for 20 optimizer updates, and the conditional-score
+            objective showed signs of underfitting, as explained in the
+            <a
+              href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/mini_projects/checkpoint_02_toy_score_matching/report.md"
+              >report</a
+            >.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Takeaways</h2>
+          <p>
+            A first experiment was long overdue after all the math-heavy
+            entries! I hope this post feels like a refreshing change of pace for
+            readers who have been following the series.
+          </p>
+          <p>
+            In fact, I think the main takeaway is not what the model learned,
+            how the two objectives compared, or how we should generate data. My
+            hope is that this tiny experiment feels like you are
+            <em>connecting the dots</em> in a natural way:
+            <em>“I know about the score function. I know that models can learn
+              from data. What if I try my hand at learning the score from
+              data?”</em>
+          </p>
+          <p>
+            That is, at least for me, very encouraging: you can run an
+            experiment that uses advanced techniques while understanding what
+            is happening at every step. The experiment is small, but scaling
+            from here feels much more approachable.
+          </p>
+          <p>
+            Other than that, it was not completely obvious that, under this
+            setup, the indirect \(x_0\) objective would produce the lower
+            validation score MSE after the same short training budget. But that
+            is an issue for another post.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Open Questions</h2>
+          <ul>
+            <li>
+              Would training the model longer produce a different result in
+              which the conditional-score objective is superior?
+            </li>
+            <li>
+              How could we use the learned score field to sample new points from
+              the three-mountain distribution?
+            </li>
+          </ul>
+        </section>
+      </article>
+
+      <p class="post-nav"><a href="../writing.html">Back to writing</a></p>
+
+      <footer class="footer">
+        <p>Find me online or get in touch.</p>
+        <div class="links">
+          <a href="https://github.com/juancopi81">GitHub</a>
+          <a href="https://huggingface.co/juancopi81">Hugging Face</a>
+          <a href="https://www.linkedin.com/in/juancarlospinerosp/">LinkedIn</a>
+          <a href="https://x.com/juancopi81">X / Twitter</a>
+          <a href="mailto:juancopi_81@hotmail.com">Email</a>
+        </div>
+      </footer>
+    </main>
+  </body>
+</html>
