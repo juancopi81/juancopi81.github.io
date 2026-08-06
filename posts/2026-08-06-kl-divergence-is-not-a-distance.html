@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KL Divergence Is Not a Distance | Juan Carlos</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["\\[", "\\]"]],
+        },
+        svg: {
+          fontCache: "global",
+        },
+      };
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+    ></script>
+  </head>
+  <body>
+    <main class="page post-page">
+      <nav class="nav post-nav-top">
+        <a href="../index.html">Home</a>
+        <a href="../projects.html">Projects</a>
+        <a href="../writing.html">Writing</a>
+        <a href="../about.html">About</a>
+      </nav>
+
+      <article class="post-content math-note">
+        <header class="post-header">
+          <p class="eyebrow">Research Log</p>
+          <h1>KL Divergence Is Not a Distance</h1>
+          <p class="post-meta">
+            August 6, 2026 · Probability · KL divergence
+          </p>
+        </header>
+
+        <section class="post-section">
+          <h2>The Question</h2>
+          <p>
+            One characteristic of a distance metric is that distance is
+            symmetric, i.e., the distance between \(a\) and \(b\) must be the
+            same as the distance between \(b\) and \(a\). For KL divergence,
+            this is not the case, so
+            \(D_{\mathrm{KL}}(p\parallel q)=D_{\mathrm{KL}}(q\parallel p)\) is
+            not guaranteed.
+          </p>
+          <p>
+            Why is \(D_{\mathrm{KL}}\) not symmetric? And then, how could it
+            help us determine how <em>close</em> two distributions are?
+          </p>
+          <p>
+            Short answer: the order matters because
+            \(D_{\mathrm{KL}}(c\parallel t)\) averages over samples from \(c\),
+            while \(D_{\mathrm{KL}}(t\parallel c)\) averages over samples from
+            \(t\). Each direction therefore asks a different question.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Why I Care</h2>
+          <p>
+            Today, I was reviewing
+            <a href="https://arxiv.org/abs/2406.08929"
+              >“Step-by-Step Diffusion: An Elementary Tutorial”</a
+            >
+            and found this side note:
+          </p>
+          <blockquote>
+            <p>
+              “Formally, \(p_T\) is close in KL divergence to
+              \(\mathcal{N}(0,T\sigma^2)\), assuming \(p_0\) has bounded
+              moments.”
+            </p>
+          </blockquote>
+          <p>
+            It reminded me about this long-overdue post about KL divergence.
+            When working with generative models, we find plenty of situations
+            where we want to compare distributions. For example, the side note
+            in the tutorial refers to the situation where we want to compare a
+            Gaussian distribution to the final distribution of a forward
+            process in diffusion models.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Setup and Definitions</h2>
+          <p>
+            Imagine that you visit your parents at their home every Sunday. To
+            go there, you could drive your own car or take the train. On one
+            hand, traveling by train takes longer, but the duration is very
+            predictable. On the other hand, using the car is usually faster,
+            with the disadvantage of having less certainty about the total trip
+            duration due to unexpected changes in traffic conditions.
+          </p>
+          <p>
+            The goal is to use KL divergence to check how similar these two
+            distributions are.
+          </p>
+          <p>
+            We'll assume the commute time is normally distributed as
+            \(\mathcal{N}(\mu,\sigma^2)\), where \(\mu\) is the mean trip
+            duration and \(\sigma\) is the standard deviation, in minutes:
+          </p>
+
+          <div class="math-block">
+            \[
+            p(\text{car})
+            \Rightarrow
+            p(c)=\mathcal{N}(\mu_c,\sigma_c^2),
+            \]
+          </div>
+
+          <div class="math-block">
+            \[
+            p(\text{train})
+            \Rightarrow
+            p(t)=\mathcal{N}(\mu_t,\sigma_t^2),
+            \]
+          </div>
+
+          <p>where</p>
+
+          <div class="math-block">
+            \[
+            \mu_c=35,
+            \qquad
+            \sigma_c^2=3^2,
+            \]
+          </div>
+
+          <p>and</p>
+
+          <div class="math-block">
+            \[
+            \mu_t=55,
+            \qquad
+            \sigma_t^2=1^2.
+            \]
+          </div>
+
+          <p>
+            For our derivation, we'll also use the log of a normal density:
+          </p>
+
+          <div class="math-block">
+            \[
+            \mathcal{N}(x;\mu,\sigma^2)
+            =
+            \frac{1}{\sigma\sqrt{2\pi}}
+            e^{-\frac{(x-\mu)^2}{2\sigma^2}}.
+            \]
+          </div>
+
+          <div class="math-block equation-numbered">
+            <div class="equation-content">
+              \[
+              \log\mathcal{N}(x;\mu,\sigma^2)
+              =
+              -\log\left(\sigma\sqrt{2\pi}\right)
+              -
+              \frac{(x-\mu)^2}{2\sigma^2}.
+              \]
+            </div>
+            <span class="equation-number" aria-label="Equation 1">\((1)\)</span>
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>Minimal Derivation</h2>
+          <p>KL divergence is defined as:</p>
+
+          <div class="math-block equation-numbered">
+            <div class="equation-content">
+              \[
+              \begin{aligned}
+              D_{\mathrm{KL}}(c\parallel t)
+              &=
+              \mathbb{E}_{x\sim c}
+              \left[\log c(x)-\log t(x)\right] \\
+              &=
+              \mathbb{E}_{x\sim c}
+              \left[\log\left(\frac{c(x)}{t(x)}\right)\right].
+              \end{aligned}
+              \]
+            </div>
+            <span class="equation-number" aria-label="Equation 2">\((2)\)</span>
+          </div>
+
+          <p>
+            In words, we draw samples from \(c\) and ask how much more
+            surprising they are under \(t\) than under \(c\). The expectation
+            averages that extra surprise over samples from \(c\).
+          </p>
+          <p>Luckily for us, we can compute this analytically:</p>
+
+          <div class="math-block">
+            \[
+            D_{\mathrm{KL}}(c\parallel t)
+            =
+            \mathbb{E}_{x\sim c}
+            \left[\log c(x)-\log t(x)\right].
+            \]
+          </div>
+
+          <p>By equation (1) in the Setup and Definitions section:</p>
+
+          <div class="math-block">
+            \[
+            \log c(x)
+            =
+            -\log\left(\sigma_c\sqrt{2\pi}\right)
+            -
+            \frac{(x-\mu_c)^2}{2\sigma_c^2},
+            \]
+          </div>
+
+          <div class="math-block">
+            \[
+            \log t(x)
+            =
+            -\log\left(\sigma_t\sqrt{2\pi}\right)
+            -
+            \frac{(x-\mu_t)^2}{2\sigma_t^2}.
+            \]
+          </div>
+
+          <p>Replacing these in (2):</p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            D_{\mathrm{KL}}(c\parallel t)
+            =
+            \mathbb{E}_{x\sim c}\Bigg[
+              &-\log\left(\sigma_c\sqrt{2\pi}\right)
+              -\frac{(x-\mu_c)^2}{2\sigma_c^2} \\
+              &+\log\left(\sigma_t\sqrt{2\pi}\right)
+              +\frac{(x-\mu_t)^2}{2\sigma_t^2}
+            \Bigg].
+            \end{aligned}
+            \]
+          </div>
+
+          <p>Taking terms out from the expectation:</p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            D_{\mathrm{KL}}(c\parallel t)
+            &=
+            \log\left(\frac{\sigma_t}{\sigma_c}\right)
+            -\frac{1}{2\sigma_c^2}
+            \mathbb{E}_{x\sim c}\left[(x-\mu_c)^2\right] \\
+            &\quad
+            +\frac{1}{2\sigma_t^2}
+            \mathbb{E}_{x\sim c}\left[(x-\mu_t)^2\right].
+            \end{aligned}
+            \]
+          </div>
+
+          <p>Since \(x\sim c\),</p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}_{x\sim c}[x-\mu_c]=0,
+            \qquad
+            \mathbb{E}_{x\sim c}\left[(x-\mu_c)^2\right]=\sigma_c^2.
+            \]
+          </div>
+
+          <p>And</p>
+
+          <div class="math-block">
+            \[
+            x-\mu_t=(x-\mu_c)+(\mu_c-\mu_t),
+            \]
+          </div>
+
+          <p>such that</p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            \mathbb{E}_{x\sim c}\left[(x-\mu_t)^2\right]
+            &=
+            \mathbb{E}_{x\sim c}
+            \left[
+              \left((x-\mu_c)+(\mu_c-\mu_t)\right)^2
+            \right] \\
+            &=
+            \mathbb{E}_{x\sim c}
+            \left[
+              (x-\mu_c)^2
+              +2(x-\mu_c)(\mu_c-\mu_t)
+              +(\mu_c-\mu_t)^2
+            \right] \\
+            &=
+            \mathbb{E}_{x\sim c}\left[(x-\mu_c)^2\right]
+            +2\mathbb{E}_{x\sim c}[x-\mu_c](\mu_c-\mu_t)
+            +(\mu_c-\mu_t)^2 \\
+            &=
+            \sigma_c^2+(\mu_c-\mu_t)^2.
+            \end{aligned}
+            \]
+          </div>
+
+          <p>So</p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            D_{\mathrm{KL}}(c\parallel t)
+            &=
+            \log\left(\frac{\sigma_t}{\sigma_c}\right)
+            +
+            \frac{\sigma_c^2+(\mu_c-\mu_t)^2}{2\sigma_t^2}
+            -
+            \frac{\sigma_c^2}{2\sigma_c^2} \\
+            &=
+            \log\left(\frac{\sigma_t}{\sigma_c}\right)
+            +
+            \frac{
+              \sigma_c^2+(\mu_c-\mu_t)^2-\sigma_t^2
+            }{2\sigma_t^2}.
+            \end{aligned}
+            \]
+          </div>
+
+          <p>Similarly,</p>
+
+          <div class="math-block">
+            \[
+            D_{\mathrm{KL}}(t\parallel c)
+            =
+            \log\left(\frac{\sigma_c}{\sigma_t}\right)
+            +
+            \frac{
+              \sigma_t^2+(\mu_t-\mu_c)^2-\sigma_c^2
+            }{2\sigma_c^2}.
+            \]
+          </div>
+
+          <p>Substituting the values from our example, we get:</p>
+
+          <div class="math-block">
+            \[
+            D_{\mathrm{KL}}(c\parallel t)\approx 202.901
+            \text{ nats},
+            \qquad
+            D_{\mathrm{KL}}(t\parallel c)\approx 22.876
+            \text{ nats}.
+            \]
+          </div>
+
+          <p>
+            Since we used the natural logarithm, these values are measured in
+            nats.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Visualizing the Asymmetry</h2>
+          <p>
+            Deriving the two KL values gives us the result, but seeing where
+            each distribution puts its mass makes the asymmetry easier to
+            internalize. In the playground below, move the commute time and
+            switch the KL direction to compare the two densities, the pointwise
+            extra surprise, and each location's contribution to the final KL
+            value.
+          </p>
+
+          <div class="interactive-breakout">
+            <iframe
+              class="score-playground-frame"
+              data-kl-playground
+              src="../assets/posts/kl-divergence-commute-playground.html"
+              title="Interactive commute-time KL divergence playground"
+              loading="lazy"
+            ></iframe>
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>What I Think I Learned</h2>
+          <p>
+            These results show a huge asymmetry, almost 9 to 1, and we can
+            intuitively see why. Imagine that you said to your mother it took
+            you 35 minutes to arrive there. Your mom would immediately assume
+            you used the car. It seems almost impossible to arrive in 35
+            minutes using the train. Indeed:
+          </p>
+
+          <div class="math-block">
+            \[
+            z=\frac{35-55}{1}=-20.
+            \]
+          </div>
+
+          <p>
+            You are
+            <strong>20 train standard deviations away from the train mean</strong>.
+          </p>
+          <p>
+            In the other direction, if you said it took you 55 minutes, you
+            most certainly took the train, but the possibility of having used
+            the car is not as extreme as the reverse case:
+          </p>
+
+          <div class="math-block">
+            \[
+            z=\frac{55-35}{3}\approx 6.67.
+            \]
+          </div>
+
+          <p>
+            Both outcomes are extremely unlikely under the wrong model, but 20
+            standard deviations is vastly more extreme than 6.67.
+          </p>
+
+          <p>
+            These z-scores do not calculate the KL; they only help us see where
+            the asymmetry comes from. Looking back at the formula, the same
+            20-minute gap is being judged using the uncertainty of the model on
+            the right.
+          </p>
+
+          <p>
+            Under our assumptions, using the train model to explain commute
+            times that come from the car distribution would cause a lot of
+            surprises, much more than using the car model to explain train
+            commute times:
+          </p>
+
+          <div class="math-block">
+            \[
+            D_{\mathrm{KL}}(c\parallel t)
+            \gg
+            D_{\mathrm{KL}}(t\parallel c).
+            \]
+          </div>
+
+          <p>
+            Which makes sense. We started the story by saying that train
+            travels were very predictable.
+          </p>
+          <p>
+            I hope that this example from daily life helps us understand why KL
+            divergence is not symmetric (hence not a distance) and how it is
+            used to compare distributions. Notice that if \(c\) and \(t\) were
+            the same, we would get:
+          </p>
+
+          <div class="math-block">
+            \[
+            D_{\mathrm{KL}}(c\parallel t)
+            =
+            \mathbb{E}_{x\sim c}
+            \left[
+              \log\left(\frac{c(x)}{c(x)}\right)
+            \right]
+            =
+            \mathbb{E}_{x\sim c}[\log(1)]
+            =
+            0.
+            \]
+          </div>
+
+          <p>
+            So we should be careful with the word <em>close</em>. KL does not
+            give us a universal boundary between close and far. It tells us how
+            much worse the model on the right is at explaining samples from the
+            distribution on the left.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Open Questions</h2>
+          <ul>
+            <li>
+              3Blue1Brown released a
+              <a href="https://www.youtube.com/watch?v=GlYgs6v2YfU"
+                >video about cross-entropy</a
+              >. At the end, he asks about using KL divergence instead of
+              cross-entropy when training a specific model. What are the
+              consequences?
+            </li>
+            <li>
+              What other measurements could we use to compare two
+              distributions, and what are their advantages/disadvantages? For
+              example, a metric closer to the distance between the surfaces of
+              the distributions.
+            </li>
+          </ul>
+        </section>
+
+        <section class="post-section">
+          <h2>References</h2>
+          <ul class="references">
+            <li>
+              <a href="https://www.youtube.com/watch?v=GlYgs6v2YfU"
+                >But what is cross-entropy? | Compression is Intelligence Part
+                2</a
+              >
+            </li>
+            <li>
+              <a href="https://mml-book.github.io/"
+                >Mathematics for Machine Learning, Chapter 3.3: Lengths and
+                Distances</a
+              >
+            </li>
+            <li>
+              <a href="https://arxiv.org/abs/2406.08929"
+                >Step-by-Step Diffusion: An Elementary Tutorial</a
+              >
+            </li>
+          </ul>
+        </section>
+      </article>
+
+      <p class="post-nav"><a href="../writing.html">Back to writing</a></p>
+
+      <footer class="footer">
+        <p>Find me online or get in touch.</p>
+        <div class="links">
+          <a href="https://github.com/juancopi81">GitHub</a>
+          <a href="https://huggingface.co/juancopi81">Hugging Face</a>
+          <a href="https://www.linkedin.com/in/juancarlospinerosp/">LinkedIn</a>
+          <a href="https://x.com/juancopi81">X / Twitter</a>
+          <a href="mailto:juancopi_81@hotmail.com">Email</a>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      const klPlayground = document.querySelector("[data-kl-playground]");
+
+      window.addEventListener("message", (event) => {
+        if (
+          !klPlayground ||
+          event.source !== klPlayground.contentWindow ||
+          event.data?.type !== "kl-playground:resize"
+        ) {
+          return;
+        }
+
+        const requestedHeight = Number(event.data.height);
+        if (!Number.isFinite(requestedHeight)) return;
+
+        const frameHeight = Math.max(760, Math.min(requestedHeight + 2, 3200));
+        klPlayground.style.height = `${frameHeight}px`;
+      });
+    </script>
+  </body>
+</html>

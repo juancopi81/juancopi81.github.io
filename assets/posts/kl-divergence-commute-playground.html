@@ -1,0 +1,987 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Play with the Direction of KL Divergence</title>
+    <style>
+      :root {
+        --bg: #fafafa;
+        --panel: #ffffff;
+        --text: #18181b;
+        --muted: #71717a;
+        --accent: #2563eb;
+        --accent-soft: #eff6ff;
+        --line: #e4e4e7;
+        --subtle: #f4f4f5;
+        --car: #2563eb;
+        --train: #16a34a;
+        --cursor: #dc2626;
+        --integrand: #7c3aed;
+        --negative: #ea580c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+
+      .wrap {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+        line-height: 1.25;
+      }
+
+      .subtitle {
+        max-width: 900px;
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(270px, 300px) minmax(0, 1fr);
+        gap: 14px;
+        align-items: start;
+      }
+
+      .panel {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .controls h2,
+      .panel h2 {
+        margin: 0 0 12px;
+        font-size: 17px;
+        line-height: 1.35;
+      }
+
+      .workspace {
+        display: grid;
+        min-width: 0;
+        gap: 14px;
+      }
+
+      .control-group {
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .control-group:last-child {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: 0;
+      }
+
+      .label-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+
+      .label-row label,
+      legend {
+        padding: 0;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .value {
+        min-width: 76px;
+        color: var(--muted);
+        font-size: 13px;
+        text-align: right;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+      }
+
+      input:focus-visible,
+      .direction-option:focus-within {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      fieldset {
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+
+      .direction-options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+      }
+
+      .direction-option {
+        position: relative;
+        display: block;
+        min-height: 44px;
+        padding: 10px 8px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--subtle);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 650;
+        text-align: center;
+      }
+
+      .direction-option:has(input:checked) {
+        border-color: #93c5fd;
+        background: var(--accent-soft);
+        color: #1d4ed8;
+      }
+
+      .direction-option input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      .fixed-models {
+        display: grid;
+        gap: 8px;
+      }
+
+      .model-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 9px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--subtle);
+        font-size: 13px;
+      }
+
+      .model-name {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-weight: 650;
+      }
+
+      .swatch {
+        width: 12px;
+        height: 4px;
+        border-radius: 4px;
+        background: currentColor;
+      }
+
+      .car {
+        color: var(--car);
+      }
+
+      .train {
+        color: var(--train);
+      }
+
+      .small,
+      .footer-note {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .footer-note {
+        margin-top: 14px;
+      }
+
+      .look-for {
+        margin: 6px 0 0;
+        padding-left: 18px;
+      }
+
+      .look-for li {
+        margin-bottom: 5px;
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .legend span::before {
+        content: "";
+        display: inline-block;
+        width: 14px;
+        height: 3px;
+        margin-right: 6px;
+        border-radius: 4px;
+        background: currentColor;
+        vertical-align: middle;
+      }
+
+      .legend .cursor::before {
+        width: 3px;
+        height: 12px;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(120px, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .metric {
+        min-width: 0;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--subtle);
+      }
+
+      .metric .k {
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .metric .v {
+        overflow-wrap: anywhere;
+        font-size: 17px;
+        font-weight: 700;
+      }
+
+      .callout {
+        margin-top: 12px;
+        padding: 12px;
+        border: 1px solid #bfdbfe;
+        border-radius: 6px;
+        background: var(--accent-soft);
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .z-scores {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 18px;
+        margin-top: 7px;
+        color: #3f3f46;
+        font-size: 13px;
+      }
+
+      .canvas-box {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 12 / 5;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: white;
+      }
+
+      #pdfCanvas {
+        cursor: ew-resize;
+        touch-action: none;
+      }
+
+      @media (max-width: 980px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .controls {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px 16px;
+        }
+
+        .controls h2,
+        .controls .footer-note {
+          grid-column: 1 / -1;
+        }
+
+        .control-group {
+          margin: 0;
+          padding: 12px 0 0;
+          border-top: 1px solid var(--line);
+          border-bottom: 0;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .wrap {
+          padding: 14px;
+        }
+
+        .controls {
+          grid-template-columns: 1fr;
+        }
+
+        .controls h2,
+        .controls .footer-note {
+          grid-column: auto;
+        }
+
+        .metrics {
+          grid-template-columns: 1fr;
+        }
+
+        canvas {
+          aspect-ratio: 4 / 3;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Play with the Direction of KL Divergence</h1>
+      <p class="subtitle">
+        KL divergence averages a pointwise log-ratio under the distribution on
+        the left. Switch that source distribution, then move the commute time
+        to see why the two directions ask different questions.
+      </p>
+
+      <div class="layout">
+        <aside class="panel controls" aria-label="KL divergence controls">
+          <h2>Controls</h2>
+
+          <div class="control-group">
+            <fieldset>
+              <legend>KL direction</legend>
+              <div class="direction-options">
+                <label class="direction-option">
+                  <input
+                    type="radio"
+                    name="direction"
+                    value="car-train"
+                    checked
+                  />
+                  Car ∥ Train
+                </label>
+                <label class="direction-option">
+                  <input type="radio" name="direction" value="train-car" />
+                  Train ∥ Car
+                </label>
+              </div>
+            </fieldset>
+          </div>
+
+          <div class="control-group">
+            <div class="label-row">
+              <label for="timeSlider">Commute time</label>
+              <output class="value" id="timeValue" for="timeSlider"
+                >35.0 min</output
+              >
+            </div>
+            <input
+              id="timeSlider"
+              type="range"
+              min="20"
+              max="65"
+              step="0.1"
+              value="35"
+            />
+            <div class="small" style="margin-top: 6px">
+              Use the slider or drag the red cursor in the upper chart.
+            </div>
+          </div>
+
+          <div class="control-group">
+            <h2>Fixed commute models</h2>
+            <div class="fixed-models">
+              <div class="model-row">
+                <span class="model-name car"
+                  ><span class="swatch"></span>Car</span
+                >
+                <span>C ~ N(35, 3²)</span>
+              </div>
+              <div class="model-row">
+                <span class="model-name train"
+                  ><span class="swatch"></span>Train</span
+                >
+                <span>T ~ N(55, 1²)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="footer-note">
+            <strong>What to look for:</strong>
+            <ul class="look-for">
+              <li>The left-hand distribution decides where KL puts weight.</li>
+              <li>
+                A typical car time can be nearly impossible under the narrow
+                train model.
+              </li>
+              <li>
+                Pointwise contributions may be negative even though their KL
+                average is nonnegative.
+              </li>
+            </ul>
+          </div>
+        </aside>
+
+        <main class="workspace">
+          <section class="panel" aria-labelledby="nowHeading">
+            <h2 id="nowHeading">What is happening right now?</h2>
+            <div class="legend" aria-label="Chart legend">
+              <span class="car">Car density</span>
+              <span class="train">Train density</span>
+              <span class="cursor">Selected time</span>
+            </div>
+
+            <div class="metrics" aria-live="polite" aria-atomic="true">
+              <div class="metric">
+                <div class="k" id="sourceDensityLabel">Source density c(x)</div>
+                <div class="v" id="sourceDensity">0.1330</div>
+              </div>
+              <div class="metric">
+                <div class="k" id="comparisonDensityLabel">
+                  Comparison density t(x)
+                </div>
+                <div class="v" id="comparisonDensity">5.52e-88</div>
+              </div>
+              <div class="metric">
+                <div class="k">Pointwise extra surprise</div>
+                <div class="v" id="extraSurprise">198.901 nats</div>
+              </div>
+            </div>
+
+            <div class="callout" id="status" role="status" aria-live="polite">
+              <strong id="klValue">D(Car ∥ Train) = 202.901 nats.</strong>
+              <span id="statusExplanation">
+                At 35.0 minutes, the train model is far more surprised than the
+                car model.
+              </span>
+              <span id="contributionValue">
+                The pointwise contribution here is 26.450 nats per minute.
+              </span>
+              <div class="z-scores">
+                <span id="carZ">Car z-score: 0.00</span>
+                <span id="trainZ">Train z-score: −20.00</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel canvas-box" aria-labelledby="pdfHeading">
+            <h2 id="pdfHeading">The same time under both commute models</h2>
+            <canvas
+              id="pdfCanvas"
+              width="900"
+              height="375"
+              role="img"
+              aria-label="Car and train normal density curves with a movable commute-time cursor"
+            ></canvas>
+            <div class="small">
+              The train is slower but much more predictable, so its density is
+              tall and narrow. The car is faster but more variable.
+            </div>
+          </section>
+
+          <section class="panel canvas-box" aria-labelledby="integrandHeading">
+            <h2 id="integrandHeading">Where the selected KL value comes from</h2>
+            <canvas
+              id="integrandCanvas"
+              width="900"
+              height="375"
+              role="img"
+              aria-label="Pointwise contribution to the selected direction of KL divergence"
+            ></canvas>
+            <div class="small" id="integrandCaption">
+              The curve is c(x) log(c(x) / t(x)). Across the full real line,
+              its signed area is D(Car ∥ Train): 202.901 nats. The vertical
+              scale stays fixed when the direction changes, so the two areas
+              are directly comparable.
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const X_MIN = 20;
+      const X_MAX = 65;
+      const CAR = { name: "Car", symbol: "c", mean: 35, sigma: 3 };
+      const TRAIN = { name: "Train", symbol: "t", mean: 55, sigma: 1 };
+      const COLORS = {
+        car: "#2563eb",
+        train: "#16a34a",
+        cursor: "#dc2626",
+        integrand: "#7c3aed",
+        negative: "#ea580c",
+        grid: "#e4e4e7",
+        axis: "#71717a",
+        text: "#3f3f46",
+      };
+
+      const els = {
+        directionInputs: Array.from(
+          document.querySelectorAll('input[name="direction"]'),
+        ),
+        timeSlider: document.getElementById("timeSlider"),
+        timeValue: document.getElementById("timeValue"),
+        sourceDensityLabel: document.getElementById("sourceDensityLabel"),
+        comparisonDensityLabel: document.getElementById(
+          "comparisonDensityLabel",
+        ),
+        sourceDensity: document.getElementById("sourceDensity"),
+        comparisonDensity: document.getElementById("comparisonDensity"),
+        extraSurprise: document.getElementById("extraSurprise"),
+        klValue: document.getElementById("klValue"),
+        statusExplanation: document.getElementById("statusExplanation"),
+        contributionValue: document.getElementById("contributionValue"),
+        carZ: document.getElementById("carZ"),
+        trainZ: document.getElementById("trainZ"),
+        integrandCaption: document.getElementById("integrandCaption"),
+        pdfCanvas: document.getElementById("pdfCanvas"),
+        integrandCanvas: document.getElementById("integrandCanvas"),
+      };
+
+      let draggingCursor = false;
+
+      function logDensity(x, model) {
+        const z = (x - model.mean) / model.sigma;
+        return (
+          -Math.log(model.sigma * Math.sqrt(2 * Math.PI)) - 0.5 * z * z
+        );
+      }
+
+      function density(x, model) {
+        return Math.exp(logDensity(x, model));
+      }
+
+      function analyticKL(source, comparison) {
+        const meanDifference = source.mean - comparison.mean;
+        return (
+          Math.log(comparison.sigma / source.sigma) +
+          (source.sigma ** 2 + meanDifference ** 2) /
+            (2 * comparison.sigma ** 2) -
+          0.5
+        );
+      }
+
+      function selectedModels() {
+        const direction = els.directionInputs.find((input) => input.checked).value;
+        return direction === "car-train"
+          ? { source: CAR, comparison: TRAIN }
+          : { source: TRAIN, comparison: CAR };
+      }
+
+      function selectedTime() {
+        return Number(els.timeSlider.value);
+      }
+
+      function pointwiseLogRatio(x, source, comparison) {
+        return logDensity(x, source) - logDensity(x, comparison);
+      }
+
+      function integrand(x, source, comparison) {
+        return density(x, source) * pointwiseLogRatio(x, source, comparison);
+      }
+
+      function formatDensity(value) {
+        if (value === 0) return "0";
+        if (value < 0.001) return value.toExponential(2);
+        return value.toFixed(4);
+      }
+
+      function formatSigned(value, digits = 2) {
+        if (Math.abs(value) < 0.5 * 10 ** -digits) return (0).toFixed(digits);
+        return value.toFixed(digits).replace("-", "−");
+      }
+
+      function formatContribution(value) {
+        if (value !== 0 && Math.abs(value) < 0.001) {
+          return value.toExponential(2).replace("-", "−");
+        }
+        return formatSigned(value, 3);
+      }
+
+      function configureCanvas(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const cssWidth = Math.max(260, Math.round(rect.width));
+        const cssHeight = Math.max(220, Math.round(rect.height));
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        const width = Math.round(cssWidth * ratio);
+        const height = Math.round(cssHeight * ratio);
+
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+        }
+
+        const context = canvas.getContext("2d");
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        return { context, width: cssWidth, height: cssHeight };
+      }
+
+      function chartArea(width, height) {
+        return {
+          left: width < 430 ? 50 : 58,
+          right: width - 22,
+          top: 20,
+          bottom: height - 48,
+        };
+      }
+
+      function xToPixel(x, area) {
+        return (
+          area.left + ((x - X_MIN) / (X_MAX - X_MIN)) * (area.right - area.left)
+        );
+      }
+
+      function yToPixel(y, yMin, yMax, area) {
+        return (
+          area.bottom -
+          ((y - yMin) / (yMax - yMin)) * (area.bottom - area.top)
+        );
+      }
+
+      function drawAxes(context, area, yMin, yMax, yFormatter) {
+        context.save();
+        context.font = "12px system-ui";
+        context.lineWidth = 1;
+        context.textAlign = "center";
+        context.textBaseline = "top";
+
+        for (let x = X_MIN; x <= X_MAX; x += 5) {
+          const px = xToPixel(x, area);
+          context.strokeStyle = COLORS.grid;
+          context.beginPath();
+          context.moveTo(px, area.top);
+          context.lineTo(px, area.bottom);
+          context.stroke();
+          context.fillStyle = COLORS.axis;
+          context.fillText(String(x), px, area.bottom + 8);
+        }
+
+        context.textAlign = "right";
+        context.textBaseline = "middle";
+        for (let index = 0; index <= 4; index += 1) {
+          const value = yMin + ((yMax - yMin) * index) / 4;
+          const py = yToPixel(value, yMin, yMax, area);
+          context.strokeStyle = COLORS.grid;
+          context.beginPath();
+          context.moveTo(area.left, py);
+          context.lineTo(area.right, py);
+          context.stroke();
+          context.fillStyle = COLORS.axis;
+          context.fillText(yFormatter(value), area.left - 8, py);
+        }
+
+        context.strokeStyle = "#a1a1aa";
+        context.beginPath();
+        context.moveTo(area.left, area.top);
+        context.lineTo(area.left, area.bottom);
+        context.lineTo(area.right, area.bottom);
+        context.stroke();
+
+        context.fillStyle = COLORS.text;
+        context.textAlign = "center";
+        context.textBaseline = "bottom";
+        context.fillText(
+          "commute time (minutes)",
+          (area.left + area.right) / 2,
+          area.bottom + 44,
+        );
+        context.restore();
+      }
+
+      function sampleCurve(fn, count = 360) {
+        return Array.from({ length: count + 1 }, (_, index) => {
+          const x = X_MIN + ((X_MAX - X_MIN) * index) / count;
+          return { x, y: fn(x) };
+        });
+      }
+
+      function strokeCurve(context, points, area, yMin, yMax, color) {
+        context.save();
+        context.strokeStyle = color;
+        context.lineWidth = 2.5;
+        context.lineJoin = "round";
+        context.beginPath();
+        points.forEach((point, index) => {
+          const px = xToPixel(point.x, area);
+          const py = yToPixel(point.y, yMin, yMax, area);
+          if (index === 0) context.moveTo(px, py);
+          else context.lineTo(px, py);
+        });
+        context.stroke();
+        context.restore();
+      }
+
+      function drawCursor(context, x, area, yMin, yMax, values) {
+        const px = xToPixel(x, area);
+        context.save();
+        context.strokeStyle = COLORS.cursor;
+        context.lineWidth = 1.5;
+        context.setLineDash([5, 4]);
+        context.beginPath();
+        context.moveTo(px, area.top);
+        context.lineTo(px, area.bottom);
+        context.stroke();
+        context.setLineDash([]);
+
+        values.forEach(({ value, color }) => {
+          const py = yToPixel(value, yMin, yMax, area);
+          context.fillStyle = "white";
+          context.strokeStyle = color;
+          context.lineWidth = 2.5;
+          context.beginPath();
+          context.arc(px, py, 5, 0, 2 * Math.PI);
+          context.fill();
+          context.stroke();
+        });
+        context.restore();
+      }
+
+      function drawPdfChart() {
+        const { context, width, height } = configureCanvas(els.pdfCanvas);
+        const area = chartArea(width, height);
+        const yMin = 0;
+        const yMax = 0.44;
+        const carPoints = sampleCurve((x) => density(x, CAR));
+        const trainPoints = sampleCurve((x) => density(x, TRAIN));
+        const x = selectedTime();
+
+        context.clearRect(0, 0, width, height);
+        drawAxes(context, area, yMin, yMax, (value) => value.toFixed(2));
+        strokeCurve(context, carPoints, area, yMin, yMax, COLORS.car);
+        strokeCurve(context, trainPoints, area, yMin, yMax, COLORS.train);
+        drawCursor(context, x, area, yMin, yMax, [
+          { value: density(x, CAR), color: COLORS.car },
+          { value: density(x, TRAIN), color: COLORS.train },
+        ]);
+      }
+
+      function fillIntegrand(context, points, area, yMin, yMax) {
+        const zeroY = yToPixel(0, yMin, yMax, area);
+
+        for (const [positive, color] of [
+          [true, "rgba(124, 58, 237, 0.20)"],
+          [false, "rgba(234, 88, 12, 0.22)"],
+        ]) {
+          context.save();
+          context.beginPath();
+          context.rect(
+            area.left,
+            positive ? area.top : zeroY,
+            area.right - area.left,
+            positive ? zeroY - area.top : area.bottom - zeroY,
+          );
+          context.clip();
+          context.beginPath();
+          context.moveTo(xToPixel(points[0].x, area), zeroY);
+          points.forEach((point) => {
+            context.lineTo(
+              xToPixel(point.x, area),
+              yToPixel(point.y, yMin, yMax, area),
+            );
+          });
+          context.lineTo(xToPixel(points[points.length - 1].x, area), zeroY);
+          context.closePath();
+          context.fillStyle = color;
+          context.fill();
+          context.restore();
+        }
+      }
+
+      function drawIntegrandChart() {
+        const { source, comparison } = selectedModels();
+        const { context, width, height } = configureCanvas(els.integrandCanvas);
+        const area = chartArea(width, height);
+        const points = sampleCurve((x) => integrand(x, source, comparison), 500);
+        const reversePoints = sampleCurve(
+          (x) => integrand(x, comparison, source),
+          500,
+        );
+        const values = [...points, ...reversePoints].map((point) => point.y);
+        const rawMin = Math.min(0, ...values);
+        const rawMax = Math.max(0, ...values);
+        const span = Math.max(rawMax - rawMin, 0.001);
+        const yMin = rawMin - span * 0.08;
+        const yMax = rawMax + span * 0.1;
+        const x = selectedTime();
+        const selectedContribution = integrand(x, source, comparison);
+
+        context.clearRect(0, 0, width, height);
+        drawAxes(context, area, yMin, yMax, (value) => {
+          if (Math.abs(value) < 0.005) return "0";
+          return value.toFixed(1);
+        });
+
+        const zeroY = yToPixel(0, yMin, yMax, area);
+        context.save();
+        context.strokeStyle = "#a1a1aa";
+        context.lineWidth = 1.5;
+        context.beginPath();
+        context.moveTo(area.left, zeroY);
+        context.lineTo(area.right, zeroY);
+        context.stroke();
+        context.restore();
+
+        fillIntegrand(context, points, area, yMin, yMax);
+        strokeCurve(context, points, area, yMin, yMax, COLORS.integrand);
+        drawCursor(context, x, area, yMin, yMax, [
+          { value: selectedContribution, color: COLORS.integrand },
+        ]);
+      }
+
+      function explainAtPoint(x, source, comparison, logRatio) {
+        const comparisonIsMoreSurprised = logRatio >= 0;
+        const first = comparisonIsMoreSurprised
+          ? `the ${comparison.name.toLowerCase()} model is more surprised than the ${source.name.toLowerCase()} model.`
+          : `the ${source.name.toLowerCase()} model is more surprised than the ${comparison.name.toLowerCase()} model.`;
+        const second = comparisonIsMoreSurprised
+          ? "This location contributes positively to the selected KL average."
+          : "This location contributes negatively, but the complete KL average remains nonnegative.";
+        return `At ${x.toFixed(1)} minutes, ${first} ${second}`;
+      }
+
+      function updateReadout() {
+        const { source, comparison } = selectedModels();
+        const x = selectedTime();
+        const sourceDensity = density(x, source);
+        const comparisonDensity = density(x, comparison);
+        const logRatio = pointwiseLogRatio(x, source, comparison);
+        const pointwiseContribution = sourceDensity * logRatio;
+        const kl = analyticKL(source, comparison);
+
+        els.timeValue.textContent = `${x.toFixed(1)} min`;
+        els.sourceDensityLabel.textContent = `Source density ${source.symbol}(x)`;
+        els.comparisonDensityLabel.textContent =
+          `Comparison density ${comparison.symbol}(x)`;
+        els.sourceDensity.textContent = formatDensity(sourceDensity);
+        els.comparisonDensity.textContent = formatDensity(comparisonDensity);
+        els.extraSurprise.textContent = `${formatSigned(logRatio, 3)} nats`;
+        els.klValue.textContent =
+          `D(${source.name} ∥ ${comparison.name}) = ${kl.toFixed(3)} nats. `;
+        els.statusExplanation.textContent = explainAtPoint(
+          x,
+          source,
+          comparison,
+          logRatio,
+        );
+        els.contributionValue.textContent =
+          ` The pointwise contribution here is ${formatContribution(pointwiseContribution)} ` +
+          "nats per minute.";
+        els.carZ.textContent = `Car z-score: ${formatSigned((x - CAR.mean) / CAR.sigma)}`;
+        els.trainZ.textContent =
+          `Train z-score: ${formatSigned((x - TRAIN.mean) / TRAIN.sigma)}`;
+        els.integrandCaption.textContent =
+          `The curve is ${source.symbol}(x) log(${source.symbol}(x) / ${comparison.symbol}(x)). ` +
+          `Across the full real line, its signed area is D(${source.name} ∥ ${comparison.name}): ${kl.toFixed(3)} nats. ` +
+          "The vertical scale stays fixed when the direction changes, so the two areas are directly comparable.";
+      }
+
+      function render() {
+        updateReadout();
+        drawPdfChart();
+        drawIntegrandChart();
+      }
+
+      function setTimeFromPointer(event) {
+        const rect = els.pdfCanvas.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        const area = chartArea(width, height);
+        const pointerX = event.clientX - rect.left;
+        const fraction = Math.max(
+          0,
+          Math.min(1, (pointerX - area.left) / (area.right - area.left)),
+        );
+        const value = X_MIN + fraction * (X_MAX - X_MIN);
+        els.timeSlider.value = (Math.round(value * 10) / 10).toFixed(1);
+        render();
+      }
+
+      els.directionInputs.forEach((input) => {
+        input.addEventListener("change", render);
+      });
+      els.timeSlider.addEventListener("input", render);
+
+      els.pdfCanvas.addEventListener("pointerdown", (event) => {
+        draggingCursor = true;
+        els.pdfCanvas.setPointerCapture(event.pointerId);
+        setTimeFromPointer(event);
+      });
+      els.pdfCanvas.addEventListener("pointermove", (event) => {
+        if (draggingCursor) setTimeFromPointer(event);
+      });
+      els.pdfCanvas.addEventListener("pointerup", () => {
+        draggingCursor = false;
+      });
+      els.pdfCanvas.addEventListener("pointercancel", () => {
+        draggingCursor = false;
+      });
+
+      let resizeFrame;
+      const redrawOnResize = () => {
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(render);
+      };
+      window.addEventListener("resize", redrawOnResize);
+
+      function reportHeight() {
+        if (window.parent === window) return;
+        const playground = document.querySelector(".wrap");
+        const height = playground
+          ? Math.ceil(playground.getBoundingClientRect().height)
+          : Math.ceil(document.body.scrollHeight);
+
+        window.parent.postMessage(
+          {
+            type: "kl-playground:resize",
+            height,
+          },
+          "*",
+        );
+      }
+
+      window.addEventListener("load", reportHeight);
+      if ("ResizeObserver" in window) {
+        new ResizeObserver(reportHeight).observe(document.body);
+      }
+      setTimeout(reportHeight, 100);
+
+      render();
+    </script>
+  </body>
+</html>
