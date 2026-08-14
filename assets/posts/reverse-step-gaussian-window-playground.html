@@ -1,0 +1,1027 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shrink the Gaussian Window</title>
+    <style>
+      :root {
+        --bg: #fafafa;
+        --panel: #ffffff;
+        --text: #18181b;
+        --muted: #71717a;
+        --accent: #2563eb;
+        --accent-soft: #eff6ff;
+        --line: #e4e4e7;
+        --subtle: #f4f4f5;
+        --prior: #52525b;
+        --likelihood: #d97706;
+        --joint: #7c3aed;
+        --posterior: #2563eb;
+        --observation: #dc2626;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      input:focus-visible,
+      canvas:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 17px;
+        line-height: 1.35;
+      }
+
+      .subtitle {
+        max-width: 900px;
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .panel {
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 12px 22px;
+        margin-bottom: 14px;
+      }
+
+      .control {
+        min-width: 0;
+      }
+
+      .label-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 6px;
+      }
+
+      label {
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      output {
+        color: var(--muted);
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+      }
+
+      .range-ends {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 1px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .model {
+        grid-column: 1 / -1;
+        margin: 0;
+        padding-top: 11px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .model strong {
+        color: var(--text);
+      }
+
+      .chart-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 9px;
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px 13px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .legend i {
+        width: 14px;
+        height: 3px;
+        border-radius: 99px;
+        background: currentColor;
+      }
+
+      .legend .dashed i {
+        height: 0;
+        border-top: 2px dashed currentColor;
+        border-radius: 0;
+        background: transparent;
+      }
+
+      .legend .window i {
+        height: 10px;
+        border: 1px solid #fdba74;
+        background: #ffedd5;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: 650px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #ffffff;
+        cursor: ew-resize;
+        touch-action: none;
+      }
+
+      .help {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .result {
+        display: grid;
+        grid-template-columns: 165px minmax(0, 1fr);
+        gap: 12px;
+        align-items: stretch;
+        margin-top: 14px;
+      }
+
+      .metric {
+        padding: 11px 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--subtle);
+      }
+
+      .metric small {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 21px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .metric span {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .callout {
+        padding: 11px 12px;
+        border: 1px solid #bfdbfe;
+        border-radius: 6px;
+        background: var(--accent-soft);
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .callout strong {
+        color: #1d4ed8;
+      }
+
+      .check {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+      }
+
+      @media (max-width: 720px) {
+        .chart-top {
+          display: block;
+        }
+
+        .legend {
+          justify-content: flex-start;
+          margin-top: 8px;
+        }
+
+        canvas {
+          height: 690px;
+        }
+      }
+
+      @media (max-width: 520px) {
+        .wrap {
+          padding: 14px;
+        }
+
+        .controls {
+          grid-template-columns: 1fr;
+        }
+
+        .model {
+          grid-column: auto;
+        }
+
+        .result {
+          grid-template-columns: 1fr;
+        }
+
+        .metric {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: baseline;
+          justify-content: space-between;
+          gap: 2px 10px;
+        }
+
+        .metric small {
+          display: inline;
+        }
+
+        .metric strong {
+          font-size: 18px;
+        }
+
+        .metric span {
+          flex-basis: 100%;
+        }
+
+        canvas {
+          height: 720px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Shrink the Gaussian Window</h1>
+      <p class="subtitle">
+        The marginal can have several peaks. Fix one observed
+        <i>z</i>=<i>x</i><sub>t</sub>, then shrink the noise step to see why the
+        local reverse conditional can still become Gaussian-like.
+      </p>
+
+      <div class="panel controls" aria-label="Reverse-step controls">
+        <div class="control">
+          <div class="label-row">
+            <label for="observation">Observed <i>z</i>=<i>x</i><sub>t</sub></label>
+            <output id="observationValue" for="observation">1.25</output>
+          </div>
+          <input
+            id="observation"
+            type="range"
+            min="-3.2"
+            max="3.2"
+            step="0.01"
+            value="1.25"
+          />
+          <div class="range-ends" aria-hidden="true">
+            <span>−3.2</span><span>3.2</span>
+          </div>
+        </div>
+
+        <div class="control">
+          <div class="label-row">
+            <label for="noiseStep">Noise variance <i>h</i></label>
+            <output id="noiseStepValue" for="noiseStep"
+              >0.120 · √<i>h</i>=0.346</output
+            >
+          </div>
+          <input
+            id="noiseStep"
+            type="range"
+            min="0"
+            max="100"
+            step="0.1"
+            value="47.5"
+            aria-valuetext="h equals 0.120"
+          />
+          <div class="range-ends" aria-hidden="true">
+            <span>smaller step</span><span>larger step</span>
+          </div>
+        </div>
+
+        <p class="model">
+          <strong>Fixed setup:</strong>
+          <i>Z</i>=<i>Y</i>+√<i>h</i> ε, ε∼N(0,1), with a multimodal
+          <i>p</i><sub>Y</sub>. The exact conditional is
+          <i>p</i>(<i>y</i>|<i>z</i>) ∝
+          exp(−(<i>z</i>−<i>y</i>)²/(2<i>h</i>))
+          <i>p</i><sub>Y</sub>(<i>y</i>); the dashed curve below is only the
+          zeroth-order approximation N(<i>y</i>; <i>z</i>, <i>h</i>).
+        </p>
+      </div>
+
+      <div class="panel">
+        <div class="chart-top">
+          <h2>Whole distribution → local window → reverse conditional</h2>
+          <div class="legend" aria-label="Chart legend">
+            <span style="color: var(--prior)"><i></i>Marginal</span>
+            <span class="dashed" style="color: var(--likelihood)"
+              ><i></i>Likelihood kernel p(z|y)</span
+            >
+            <span class="window" style="color: var(--likelihood)"
+              ><i></i>Local window z ± 2√h</span
+            >
+            <span style="color: var(--joint)"><i></i>Joint slice</span>
+            <span style="color: var(--posterior)"><i></i>Exact conditional</span>
+            <span class="dashed" style="color: var(--likelihood)"
+              ><i></i>Zeroth-order N(y; z, h)</span
+            >
+          </div>
+        </div>
+
+        <canvas
+          id="chart"
+          width="1040"
+          height="650"
+          tabindex="0"
+          role="img"
+          aria-describedby="chartHelp liveSummary"
+          aria-label="Three aligned density plots showing a multimodal marginal, its Gaussian likelihood kernel and local window, the corresponding joint slice, and the normalized reverse conditional compared with the zeroth-order approximation N of y with mean z and variance h"
+        ></canvas>
+        <p class="help" id="chartHelp">
+          Drag the red observation line, or use the slider. When the chart is
+          focused, the left and right arrow keys also move it. The first two
+          rows are peak-scaled to reveal their shapes; the two conditional
+          curves in the last row share one density scale.
+        </p>
+      </div>
+
+      <div class="result" aria-live="polite" aria-atomic="true">
+        <div class="metric">
+          <small>Approximation gap</small>
+          <strong id="tvDistance">0.112</strong>
+          <span>total variation distance</span>
+        </div>
+        <div class="callout" id="status" role="status">
+          <strong>Only the conditional is becoming Gaussian.</strong>
+            <span id="statusText">
+              The marginal stays multimodal. A smaller h makes the likelihood
+              kernel more local. The dashed N(y; z, h) captures the zeroth-order
+              Gaussian shape but not the reverse mean shift.
+          </span>
+          <span class="check" id="normalizationCheck"
+            >Numerical integral of exact posterior: 1.000000</span
+          >
+        </div>
+      </div>
+
+      <p class="sr-only" id="liveSummary" aria-live="polite"></p>
+    </div>
+
+    <script>
+      const DOMAIN = [-6, 6];
+      const H_MIN = 0.015;
+      const H_MAX = 1.2;
+      const DEFAULT_H = 0.12;
+      const SAMPLE_COUNT = 1401;
+      const MIXTURE = [
+        { weight: 0.34, mean: -2.35, sigma: 0.5 },
+        { weight: 0.41, mean: 0.05, sigma: 0.82 },
+        { weight: 0.25, mean: 2.25, sigma: 0.42 },
+      ];
+      const COLORS = {
+        grid: "#e4e4e7",
+        axis: "#71717a",
+        text: "#3f3f46",
+        prior: "#52525b",
+        likelihood: "#d97706",
+        joint: "#7c3aed",
+        posterior: "#2563eb",
+        observation: "#dc2626",
+        window: "#fff7ed",
+      };
+
+      const elements = {
+        observation: document.getElementById("observation"),
+        observationValue: document.getElementById("observationValue"),
+        noiseStep: document.getElementById("noiseStep"),
+        noiseStepValue: document.getElementById("noiseStepValue"),
+        chart: document.getElementById("chart"),
+        tvDistance: document.getElementById("tvDistance"),
+        statusText: document.getElementById("statusText"),
+        normalizationCheck: document.getElementById("normalizationCheck"),
+        liveSummary: document.getElementById("liveSummary"),
+      };
+
+      function normalDensity(x, mean, variance) {
+        const difference = x - mean;
+        return (
+          Math.exp(-(difference * difference) / (2 * variance)) /
+          Math.sqrt(2 * Math.PI * variance)
+        );
+      }
+
+      function priorDensity(y) {
+        return MIXTURE.reduce(
+          (total, component) =>
+            total +
+            component.weight *
+              normalDensity(y, component.mean, component.sigma ** 2),
+          0,
+        );
+      }
+
+      function hFromSlider(value) {
+        const fraction = Number(value) / 100;
+        return H_MIN * (H_MAX / H_MIN) ** fraction;
+      }
+
+      function sliderFromH(h) {
+        return (
+          (100 * Math.log(h / H_MIN)) / Math.log(H_MAX / H_MIN)
+        );
+      }
+
+      function trapezoid(values, step) {
+        let total = 0;
+        for (let index = 1; index < values.length; index += 1) {
+          total += 0.5 * (values[index - 1] + values[index]) * step;
+        }
+        return total;
+      }
+
+      function exactEvidence(z, h) {
+        return MIXTURE.reduce(
+          (total, component) =>
+            total +
+            component.weight *
+              normalDensity(
+                z,
+                component.mean,
+                component.sigma ** 2 + h,
+              ),
+          0,
+        );
+      }
+
+      function distributions(z, h) {
+        const step = (DOMAIN[1] - DOMAIN[0]) / (SAMPLE_COUNT - 1);
+        const evidence = exactEvidence(z, h);
+        const points = [];
+        const posteriorValues = [];
+        const approximationValues = [];
+
+        for (let index = 0; index < SAMPLE_COUNT; index += 1) {
+          const y = DOMAIN[0] + index * step;
+          const prior = priorDensity(y);
+          const likelihood = normalDensity(z, y, h);
+          const joint = prior * likelihood;
+          const posterior = joint / evidence;
+          const approximation = normalDensity(y, z, h);
+          points.push({
+            y,
+            prior,
+            likelihood,
+            joint,
+            posterior,
+            approximation,
+          });
+          posteriorValues.push(posterior);
+          approximationValues.push(approximation);
+        }
+
+        const posteriorIntegral = trapezoid(posteriorValues, step);
+        const approximationIntegral = trapezoid(approximationValues, step);
+        const absoluteDifference = posteriorValues.map((value, index) =>
+          Math.abs(value - approximationValues[index]),
+        );
+        const tvDistance = 0.5 * trapezoid(absoluteDifference, step);
+
+        return {
+          points,
+          evidence,
+          posteriorIntegral,
+          approximationIntegral,
+          tvDistance,
+        };
+      }
+
+      function format(value, digits = 3) {
+        const rounded = Math.abs(value) < 0.5 * 10 ** -digits ? 0 : value;
+        return rounded.toFixed(digits).replace("-", "−");
+      }
+
+      function configureCanvas() {
+        const bounds = elements.chart.getBoundingClientRect();
+        const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        const cssWidth = Math.max(280, Math.round(bounds.width));
+        const cssHeight = Math.max(600, Math.round(bounds.height));
+        const width = Math.round(cssWidth * pixelRatio);
+        const height = Math.round(cssHeight * pixelRatio);
+
+        if (elements.chart.width !== width || elements.chart.height !== height) {
+          elements.chart.width = width;
+          elements.chart.height = height;
+        }
+
+        const context = elements.chart.getContext("2d");
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        context.clearRect(0, 0, cssWidth, cssHeight);
+        return { context, width: cssWidth, height: cssHeight };
+      }
+
+      function plotLayout(width, height) {
+        const compact = width < 560;
+        const left = compact ? 42 : 54;
+        const right = width - (compact ? 12 : 18);
+        const top = 16;
+        const bottom = height - 48;
+        const gap = compact ? 29 : 27;
+        const bandHeight = (bottom - top - gap * 2) / 3;
+        return {
+          compact,
+          left,
+          right,
+          bands: [0, 1, 2].map((index) => ({
+            top: top + index * (bandHeight + gap),
+            bottom: top + index * (bandHeight + gap) + bandHeight,
+          })),
+        };
+      }
+
+      function xToPixel(value, layout) {
+        return (
+          layout.left +
+          ((value - DOMAIN[0]) / (DOMAIN[1] - DOMAIN[0])) *
+            (layout.right - layout.left)
+        );
+      }
+
+      function yToPixel(value, maximum, band) {
+        const headroom = 21;
+        const availableHeight = band.bottom - band.top - headroom - 9;
+        return band.bottom - 7 - (value / maximum) * availableHeight;
+      }
+
+      function drawBandFrame(context, layout, band, showTicks) {
+        context.save();
+        context.fillStyle = "#ffffff";
+        context.strokeStyle = COLORS.grid;
+        context.lineWidth = 1;
+        context.fillRect(
+          layout.left,
+          band.top,
+          layout.right - layout.left,
+          band.bottom - band.top,
+        );
+        context.strokeRect(
+          layout.left + 0.5,
+          band.top + 0.5,
+          layout.right - layout.left - 1,
+          band.bottom - band.top - 1,
+        );
+
+        const tickStep = layout.compact ? 3 : 2;
+        context.font = `${layout.compact ? 10 : 11}px system-ui`;
+        context.textAlign = "center";
+        context.textBaseline = "top";
+        for (let tick = -6; tick <= 6; tick += tickStep) {
+          const pixel = xToPixel(tick, layout);
+          context.strokeStyle = COLORS.grid;
+          context.beginPath();
+          context.moveTo(pixel, band.top);
+          context.lineTo(pixel, band.bottom);
+          context.stroke();
+          if (showTicks) {
+            context.fillStyle = COLORS.axis;
+            context.fillText(String(tick).replace("-", "−"), pixel, band.bottom + 7);
+          }
+        }
+        context.restore();
+      }
+
+      function drawWindow(context, layout, band, z, h, includeLabel) {
+        const sigma = Math.sqrt(h);
+        const left = xToPixel(Math.max(DOMAIN[0], z - 2 * sigma), layout);
+        const right = xToPixel(Math.min(DOMAIN[1], z + 2 * sigma), layout);
+        context.save();
+        context.fillStyle = COLORS.window;
+        context.fillRect(left, band.top + 1, right - left, band.bottom - band.top - 2);
+        context.strokeStyle = "#fdba74";
+        context.lineWidth = 1;
+        context.setLineDash([3, 4]);
+        [left, right].forEach((pixel) => {
+          context.beginPath();
+          context.moveTo(pixel, band.top + 1);
+          context.lineTo(pixel, band.bottom - 1);
+          context.stroke();
+        });
+        context.setLineDash([]);
+        if (includeLabel && right - left > 82) {
+          context.fillStyle = "#9a3412";
+          context.font = `${layout.compact ? 10 : 11}px system-ui`;
+          context.textAlign = "center";
+          context.textBaseline = "top";
+          context.fillText(
+            "local window: z ± 2√h",
+            (left + right) / 2,
+            band.top + 25,
+          );
+        }
+        context.restore();
+      }
+
+      function drawCurve(
+        context,
+        points,
+        valueForPoint,
+        maximum,
+        layout,
+        band,
+        color,
+        options = {},
+      ) {
+        context.save();
+        context.beginPath();
+        points.forEach((point, index) => {
+          const x = xToPixel(point.y, layout);
+          const y = yToPixel(valueForPoint(point), maximum, band);
+          if (index === 0) context.moveTo(x, y);
+          else context.lineTo(x, y);
+        });
+
+        if (options.fill) {
+          context.lineTo(layout.right, band.bottom - 7);
+          context.lineTo(layout.left, band.bottom - 7);
+          context.closePath();
+          context.globalAlpha = options.fillOpacity || 0.12;
+          context.fillStyle = color;
+          context.fill();
+          context.globalAlpha = 1;
+          context.beginPath();
+          points.forEach((point, index) => {
+            const x = xToPixel(point.y, layout);
+            const y = yToPixel(valueForPoint(point), maximum, band);
+            if (index === 0) context.moveTo(x, y);
+            else context.lineTo(x, y);
+          });
+        }
+
+        context.strokeStyle = color;
+        context.lineWidth = options.lineWidth || 2;
+        context.lineJoin = "round";
+        context.lineCap = "round";
+        if (options.dashed) context.setLineDash([7, 5]);
+        context.stroke();
+        context.restore();
+      }
+
+      function drawLabel(context, layout, band, step, title, color, suffix) {
+        context.save();
+        context.textBaseline = "top";
+        context.font = `700 ${layout.compact ? 10 : 11}px system-ui`;
+        context.fillStyle = color;
+        context.textAlign = "left";
+        context.fillText(`${step} · ${title}`, layout.left + 8, band.top + 7);
+        if (!layout.compact && suffix) {
+          context.font = "11px system-ui";
+          context.fillStyle = COLORS.axis;
+          context.textAlign = "right";
+          context.fillText(suffix, layout.right - 8, band.top + 7);
+        }
+        context.restore();
+      }
+
+      function drawObservation(context, layout, z) {
+        const pixel = xToPixel(z, layout);
+        context.save();
+        context.strokeStyle = COLORS.observation;
+        context.fillStyle = COLORS.observation;
+        context.lineWidth = 1.5;
+        context.setLineDash([5, 4]);
+        layout.bands.forEach((band) => {
+          context.beginPath();
+          context.moveTo(pixel, band.top);
+          context.lineTo(pixel, band.bottom);
+          context.stroke();
+        });
+        context.setLineDash([]);
+        context.beginPath();
+        context.arc(pixel, layout.bands[2].bottom, 4.5, 0, Math.PI * 2);
+        context.fill();
+        context.font = `700 ${layout.compact ? 10 : 11}px system-ui`;
+        context.textAlign =
+          z > 2.55 ? "right" : z < -2.55 ? "left" : "center";
+        context.textBaseline = "bottom";
+        context.fillText(
+          `observed z=${format(z, 2)}`,
+          pixel,
+          layout.bands[0].top - 3,
+        );
+        context.restore();
+      }
+
+      function drawChart(state) {
+        const { context, width, height } = configureCanvas();
+        const layout = plotLayout(width, height);
+        const [marginalBand, jointBand, posteriorBand] = layout.bands;
+        const maximum = (key) =>
+          Math.max(...state.distributions.points.map((point) => point[key]));
+
+        drawBandFrame(context, layout, marginalBand, false);
+        drawBandFrame(context, layout, jointBand, false);
+        drawBandFrame(context, layout, posteriorBand, true);
+
+        drawWindow(context, layout, marginalBand, state.z, state.h, true);
+        drawWindow(context, layout, jointBand, state.z, state.h, false);
+        drawWindow(context, layout, posteriorBand, state.z, state.h, false);
+
+        drawCurve(
+          context,
+          state.distributions.points,
+          (point) => point.prior,
+          maximum("prior") * 1.06,
+          layout,
+          marginalBand,
+          COLORS.prior,
+          { fill: true, fillOpacity: 0.08, lineWidth: 2.2 },
+        );
+        drawCurve(
+          context,
+          state.distributions.points,
+          (point) => point.likelihood,
+          maximum("likelihood") * 1.06,
+          layout,
+          marginalBand,
+          COLORS.likelihood,
+          { dashed: true, lineWidth: 1.8 },
+        );
+
+        drawCurve(
+          context,
+          state.distributions.points,
+          (point) => point.joint,
+          maximum("joint") * 1.06,
+          layout,
+          jointBand,
+          COLORS.joint,
+          { fill: true, fillOpacity: 0.13, lineWidth: 2.2 },
+        );
+
+        const conditionalMaximum =
+          Math.max(maximum("posterior"), maximum("approximation")) * 1.06;
+        drawCurve(
+          context,
+          state.distributions.points,
+          (point) => point.posterior,
+          conditionalMaximum,
+          layout,
+          posteriorBand,
+          COLORS.posterior,
+          { fill: true, fillOpacity: 0.12, lineWidth: 2.5 },
+        );
+        drawCurve(
+          context,
+          state.distributions.points,
+          (point) => point.approximation,
+          conditionalMaximum,
+          layout,
+          posteriorBand,
+          COLORS.likelihood,
+          { dashed: true, lineWidth: 2.1 },
+        );
+
+        drawLabel(
+          context,
+          layout,
+          marginalBand,
+          "1",
+          "MARGINAL pY(y) + LIKELIHOOD KERNEL p(z|y)",
+          COLORS.prior,
+          "likelihood shape is peak-scaled",
+        );
+        drawLabel(
+          context,
+          layout,
+          jointBand,
+          "2",
+          "JOINT SLICE pY,Z(y,z)",
+          COLORS.joint,
+          "before normalization",
+        );
+        drawLabel(
+          context,
+          layout,
+          posteriorBand,
+          "3",
+          "CONDITIONAL p(y|z)",
+          COLORS.posterior,
+          "blue exact · orange dashed zeroth-order N(y;z,h)",
+        );
+
+        context.save();
+        context.fillStyle = COLORS.text;
+        context.font = `${layout.compact ? 11 : 12}px system-ui`;
+        context.textAlign = "center";
+        context.textBaseline = "top";
+        context.fillText(
+          "previous state y = xₜ₋Δt",
+          (layout.left + layout.right) / 2,
+          posteriorBand.bottom + 27,
+        );
+        context.restore();
+
+        drawObservation(context, layout, state.z);
+      }
+
+      function currentState() {
+        const z = Number(elements.observation.value);
+        const h = hFromSlider(elements.noiseStep.value);
+        return { z, h, distributions: distributions(z, h) };
+      }
+
+      function update() {
+        const state = currentState();
+        const sigma = Math.sqrt(state.h);
+        const tv = state.distributions.tvDistance;
+        elements.observationValue.value = format(state.z, 2);
+        elements.noiseStepValue.innerHTML =
+          `${format(state.h, 3)} · √<i>h</i>=${format(sigma, 3)}`;
+        elements.noiseStep.setAttribute(
+          "aria-valuetext",
+          `h equals ${format(state.h, 3)}, square root h equals ${format(sigma, 3)}`,
+        );
+        elements.tvDistance.textContent = format(tv, 3);
+        elements.normalizationCheck.textContent =
+          `Numerical integral of exact posterior: ${state.distributions.posteriorIntegral.toFixed(6)}`;
+
+        let comparison;
+        if (tv < 0.04) {
+          comparison = "The exact and approximate curves now nearly overlap.";
+        } else if (tv < 0.1) {
+          comparison = "The two curves are close, with a small local shift still visible.";
+        } else {
+          comparison = "The window is still wide enough for the prior's shape to matter visibly.";
+        }
+        elements.statusText.textContent =
+          `The marginal stays multimodal. ${comparison} The dashed N(y; z, h) is a zeroth-order shape approximation and does not encode the reverse mean shift.`;
+
+        const summary =
+          `At observed z ${format(state.z, 2)} and variance h ${format(state.h, 3)}, ` +
+          `the exact reverse conditional has total variation distance ${format(tv, 3)} ` +
+          `from the zeroth-order approximation N(y; z, h). Its displayed numerical integral is ` +
+          `${state.distributions.posteriorIntegral.toFixed(6)}. ${comparison}`;
+        elements.liveSummary.textContent = summary;
+        elements.chart.setAttribute(
+          "aria-label",
+          `${summary} Three aligned plots distinguish the multimodal marginal, a joint slice at the observed z, and the normalized reverse conditional.`,
+        );
+        drawChart(state);
+      }
+
+      function setObservationFromPointer(event) {
+        const bounds = elements.chart.getBoundingClientRect();
+        const layout = plotLayout(bounds.width, bounds.height);
+        const ratio = Math.max(
+          0,
+          Math.min(
+            1,
+            (event.clientX - bounds.left - layout.left) /
+              (layout.right - layout.left),
+          ),
+        );
+        const proposed = DOMAIN[0] + ratio * (DOMAIN[1] - DOMAIN[0]);
+        const bounded = Math.max(
+          Number(elements.observation.min),
+          Math.min(Number(elements.observation.max), proposed),
+        );
+        elements.observation.value = bounded.toFixed(2);
+        update();
+      }
+
+      let dragging = false;
+      elements.chart.addEventListener("pointerdown", (event) => {
+        dragging = true;
+        elements.chart.setPointerCapture(event.pointerId);
+        setObservationFromPointer(event);
+      });
+      elements.chart.addEventListener("pointermove", (event) => {
+        if (dragging) setObservationFromPointer(event);
+      });
+      elements.chart.addEventListener("pointerup", (event) => {
+        dragging = false;
+        if (elements.chart.hasPointerCapture(event.pointerId)) {
+          elements.chart.releasePointerCapture(event.pointerId);
+        }
+      });
+      elements.chart.addEventListener("pointercancel", () => {
+        dragging = false;
+      });
+      elements.chart.addEventListener("keydown", (event) => {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault();
+        const direction = event.key === 'ArrowRight' ? 1 : -1;
+        const increment = event.shiftKey ? 0.25 : 0.05;
+        const next = Number(elements.observation.value) + direction * increment;
+        elements.observation.value = Math.max(
+          Number(elements.observation.min),
+          Math.min(Number(elements.observation.max), next),
+        ).toFixed(2);
+        update();
+      });
+
+      elements.observation.addEventListener("input", update);
+      elements.noiseStep.addEventListener("input", update);
+
+      let resizeFrame = 0;
+      function redrawOnResize() {
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(update);
+      }
+      if ("ResizeObserver" in window) {
+        new ResizeObserver(redrawOnResize).observe(elements.chart);
+      } else {
+        window.addEventListener("resize", redrawOnResize);
+      }
+
+      function reportHeight() {
+        if (window.parent === window) return;
+        const playground = document.querySelector(".wrap");
+        const height = playground
+          ? Math.ceil(playground.getBoundingClientRect().height)
+          : Math.ceil(document.body.scrollHeight);
+        window.parent.postMessage(
+          { type: "reverse-step-gaussian:resize", height },
+          "*",
+        );
+      }
+      window.addEventListener("load", reportHeight);
+      if ("ResizeObserver" in window) {
+        new ResizeObserver(reportHeight).observe(document.body);
+      }
+
+      elements.noiseStep.value = sliderFromH(DEFAULT_H).toFixed(1);
+      update();
+      setTimeout(reportHeight, 100);
+    </script>
+  </body>
+</html>

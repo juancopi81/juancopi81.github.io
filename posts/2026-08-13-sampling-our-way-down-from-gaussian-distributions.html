@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sampling Our Way Down, One Gaussian Step at a Time | Juan Carlos</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["\\[", "\\]"]],
+        },
+        svg: {
+          fontCache: "global",
+        },
+      };
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+    ></script>
+  </head>
+  <body>
+    <main class="page post-page">
+      <nav class="nav post-nav-top">
+        <a href="../index.html">Home</a>
+        <a href="../projects.html">Projects</a>
+        <a href="../writing.html">Writing</a>
+        <a href="../about.html">About</a>
+      </nav>
+
+      <article class="post-content math-note">
+        <header class="post-header">
+          <p class="eyebrow">Research Log</p>
+          <h1>Sampling Our Way Down, One Gaussian Step at a Time</h1>
+          <p class="post-meta">
+            August 13, 2026 · Diffusion · Reverse process
+          </p>
+        </header>
+
+        <section class="post-section">
+          <h2>The Question</h2>
+          <p>
+            In some diffusion-model approaches, why can each reverse step be
+            sampled from a Gaussian distribution?
+          </p>
+          <p>
+            Short answer: because the forward process adds Gaussian noise, and
+            when the amount of noise added per step is very small, we can
+            approximate the conditional reverse distribution with a Gaussian.
+            In the simple setup of this post,
+          </p>
+
+          <div class="math-block">
+            \[
+            p(x_{t-\Delta t}\mid x_t)
+            \approx
+            \mathcal{N}\!\left(
+              x_{t-\Delta t};
+              \mu(x_t,t),
+              h
+            \right).
+            \]
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>Why I Care</h2>
+          <p>
+            Sampling in diffusion models is a huge topic with many subtleties.
+            In this post, I want to address one of those subtleties that, from
+            what I have seen, causes a lot of confusion. It is clear that the
+            forward process ultimately transforms the input image into pure
+            noise. What is harder to follow is why we use a Gaussian distribution
+            in the reverse process, i.e., during sampling. I think this confusion
+            comes from not differentiating between marginal, joint, and
+            conditional distributions.
+          </p>
+          <p>
+            Today, I want to explore a setup that lets us approximate
+            \(p(x_{t-\Delta t}\mid x_t)\) with a Gaussian distribution. If we
+            can show this under our setup, then, for an observed \(x_t\), the
+            reverse step reduces to sampling a possible \(x_{t-\Delta t}\) from
+            a Gaussian with the correct conditional mean and variance. Starting
+            from the corresponding terminal distribution and repeating accurate
+            reverse steps can then produce \(x_0\), a sample from our original
+            distribution.
+          </p>
+          <p>
+            I want to highlight that the marginal distribution, e.g.,
+            \(p(x_{t-\Delta t})\), is not necessarily Gaussian. It is the
+            conditional distribution that is approximately Gaussian. More
+            specifically, once we know the image at the next step, the
+            <em>possible previous images</em> that could have generated it are
+            distributed approximately as a Gaussian.
+          </p>
+          <p>
+            This also explains why we inject noise in some sampling approaches,
+            like DDPM, which might seem odd when cleaning up the image.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Setup and Definitions</h2>
+          <p>Let</p>
+
+          <div class="math-block">
+            \[
+            Z:=x_t,
+            \qquad
+            Y:=x_{t-\Delta t},
+            \]
+          </div>
+
+          <p>such that our forward process is</p>
+
+          <div class="math-block">
+            \[
+            Z=Y+\sqrt{h}\,\varepsilon,
+            \qquad
+            \varepsilon\sim\mathcal{N}(0,1),
+            \]
+          </div>
+
+          <p>where</p>
+          <ul>
+            <li>
+              \(h\) is the variance injected over one step, so \(\sqrt{h}\)
+              scales the noise; in a continuous-time interpretation, \(h\) is
+              proportional to \(\Delta t\),
+            </li>
+            <li>\(\varepsilon\) is independent of \(Y\), and</li>
+            <li>
+              \(\Delta t\) is one discrete step among equally spaced steps from
+              \(0\) to \(T\).
+            </li>
+          </ul>
+
+          <p>
+            With this setup, after conditioning on \(Y=y\), the only randomness
+            left in \(Z\) comes from \(\varepsilon\). Therefore,
+          </p>
+
+          <div class="math-block">
+            \[
+            Z\mid Y=y\sim\mathcal{N}(y,h).
+            \]
+          </div>
+
+          <p>Its conditional density is</p>
+
+          <div class="math-block equation-numbered">
+            <div class="equation-content">
+              \[
+              p_{Z\mid Y}(z\mid y)
+              =
+              \frac{1}{\sqrt{2\pi h}}
+              \exp\left(-\frac{(z-y)^2}{2h}\right).
+              \]
+            </div>
+            <span class="equation-number" aria-label="Equation 1">\((1)\)</span>
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>Minimal Derivation</h2>
+          <p>
+            Let \(p_Y(y)\) be the density of the previous state. It does not need
+            to be Gaussian. Under mild regularity conditions around the observed
+            \(z\), Bayes' rule gives:
+          </p>
+
+          <div class="math-block">
+            \[
+            p_{Y\mid Z}(y\mid z)
+            =
+            \frac{p_{Z\mid Y}(z\mid y)p_Y(y)}{p_Z(z)}.
+            \]
+          </div>
+
+          <p>We can substitute Equation \((1)\) from our setup:</p>
+
+          <div class="math-block">
+            \[
+            p_{Y\mid Z}(y\mid z)
+            =
+            \frac{
+              \dfrac{1}{\sqrt{2\pi h}}
+              \exp\left(-\dfrac{(z-y)^2}{2h}\right)p_Y(y)
+            }{p_Z(z)}.
+            \]
+          </div>
+
+          <p>
+            Since \(z\) is fixed, we can write this as a proportionality:
+          </p>
+
+          <div class="math-block">
+            \[
+            p_{Y\mid Z}(y\mid z)
+            \propto
+            \frac{1}{\sqrt{2\pi h}}
+            \exp\left(-\frac{(z-y)^2}{2h}\right)p_Y(y).
+            \]
+          </div>
+
+          <p>
+            Now let \(h\) become small. This is the key step. As \(h\) shrinks,
+          </p>
+
+          <div class="math-block">
+            \[
+            \exp\left(-\frac{(z-y)^2}{2h}\right)
+            \]
+          </div>
+
+          <p>
+            matters only when \(z\) and \(y\) are close. If \(z-y\) is large,
+            dividing its square by a small \(h\) makes the exponent strongly
+            negative, pushing the expression toward zero. Therefore, we have a
+            density that is almost zero everywhere except inside the tiny window
+            where \(z-y\approx 0\).
+          </p>
+          <p>Then, within that tiny window,</p>
+
+          <div class="math-block">
+            \[
+            p_Y(y)\approx p_Y(z),
+            \]
+          </div>
+
+          <p>such that</p>
+
+          <div class="math-block">
+            \[
+            p_{Y\mid Z}(y\mid z)
+            \propto
+            \frac{1}{\sqrt{2\pi h}}
+            \exp\left(-\frac{(z-y)^2}{2h}\right)p_Y(z).
+            \]
+          </div>
+
+          <p>
+            Because \(z\) is fixed, \(p_Y(z)\) is constant with respect to
+            \(y\). It multiplies every possible \(y\) by the same amount, so it
+            disappears when we normalize the density. We therefore obtain
+          </p>
+
+          <div class="math-block">
+            \[
+            p_{Y\mid Z}(y\mid z)
+            \approx
+            \frac{1}{\sqrt{2\pi h}}
+            \exp\left(-\frac{(y-z)^2}{2h}\right),
+            \]
+          </div>
+
+          <p>which is the density of</p>
+
+          <div class="math-block">
+            \[
+            Y\mid Z=z\approx\mathcal{N}(z,h).
+            \]
+          </div>
+
+          <p>
+            Approximating \(p_Y(y)\) as constant inside the tiny window gives us
+            this zeroth-order Gaussian shape. It does not yet determine the
+            reverse mean accurately enough for actual sampling. Let
+          </p>
+
+          <div class="math-block">
+            \[
+            \mu(z):=\mathbb{E}[Y\mid Z=z].
+            \]
+          </div>
+
+          <p>Then the more useful small-step approximation is</p>
+
+          <div class="math-block">
+            \[
+            Y\mid Z=z\approx\mathcal{N}(\mu(z),h),
+            \]
+          </div>
+
+          <p>
+            where \(\mu(z)\) is close to, but generally not exactly, \(z\). In
+            this smooth setting, \(\mu(z)=z+O(h)\). That small displacement gives
+            the reverse step its denoising direction. I will connect it to the
+            score in a follow-up.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Visualizing the Tiny Window</h2>
+          <p>
+            The distinction between the marginal and the conditional is easier
+            to see than to say. In the playground below, move the observed
+            \(z=x_t\) and shrink \(h\). The marginal \(p_Y(y)\) stays
+            multimodal, while the Gaussian likelihood isolates a tiny window
+            around \(z\). After normalization, the exact reverse conditional
+            approaches the zeroth-order local Gaussian \(\mathcal{N}(z,h)\). The
+            dashed curve isolates this shape approximation; the exact conditional
+            can still be slightly shifted because its mean need not equal \(z\).
+          </p>
+
+          <div class="interactive-breakout">
+            <iframe
+              class="score-playground-frame"
+              data-reverse-step-gaussian
+              src="../assets/posts/reverse-step-gaussian-window-playground.html"
+              title="Interactive small-noise Gaussian reverse-step playground"
+              loading="lazy"
+            ></iframe>
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>What I Think I Learned</h2>
+          <p>
+            With the right setup, we can make the conditional reverse
+            distribution approximately Gaussian. This is huge! We know how to
+            sample from a Gaussian, so we have identified the local form of the
+            reverse step. To actually reverse the process, we still need its
+            conditional mean and variance—exactly the questions left open below.
+          </p>
+          <p>
+            We also reviewed the importance of telling apart a marginal from a
+            conditional distribution. In our case, the marginal
+            \(p(x_{t-\Delta t})\) might not be Gaussian. But with our setup, the
+            conditional \(p(x_{t-\Delta t}\mid x_t)\) is indeed approximately
+            Gaussian.
+          </p>
+          <p>
+            Moving away from the math, the result should make intuitive sense.
+            If we add only a little noise to generate \(x_t\), then only a small
+            neighborhood of possible \(x_{t-\Delta t}\) images could plausibly
+            have generated it. These nearby images lie around the peak of the
+            conditional distribution. Most other possible images have very low
+            probability of having generated \(x_t\), so they fall in the tails
+            of the umbrella.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Open Questions</h2>
+          <ul>
+            <li>
+              I have been talking about the score in previous posts. A natural
+              follow-up is to connect it to this sampling approach.
+            </li>
+            <li>
+              To sample from a Gaussian, we still need the mean and variance.
+              Where could we get these?
+            </li>
+          </ul>
+        </section>
+
+        <section class="post-section">
+          <h2>References</h2>
+          <ul class="references">
+            <li>
+              <a href="https://arxiv.org/abs/2006.11239"
+                >Denoising Diffusion Probabilistic Models</a
+              >
+            </li>
+          </ul>
+        </section>
+      </article>
+
+      <p class="post-nav"><a href="../writing.html">Back to writing</a></p>
+
+      <footer class="footer">
+        <p>Find me online or get in touch.</p>
+        <div class="links">
+          <a href="https://github.com/juancopi81">GitHub</a>
+          <a href="https://huggingface.co/juancopi81">Hugging Face</a>
+          <a href="https://www.linkedin.com/in/juancarlospinerosp/">LinkedIn</a>
+          <a href="https://x.com/juancopi81">X / Twitter</a>
+          <a href="mailto:juancopi_81@hotmail.com">Email</a>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      const reverseStepPlayground = document.querySelector(
+        "[data-reverse-step-gaussian]",
+      );
+
+      window.addEventListener("message", (event) => {
+        if (
+          !reverseStepPlayground ||
+          event.source !== reverseStepPlayground.contentWindow ||
+          event.data?.type !== "reverse-step-gaussian:resize"
+        ) {
+          return;
+        }
+
+        const requestedHeight = Number(event.data.height);
+        if (!Number.isFinite(requestedHeight)) return;
+
+        const frameHeight = Math.max(940, Math.min(requestedHeight + 2, 2400));
+        reverseStepPlayground.style.height = `${frameHeight}px`;
+      });
+    </script>
+  </body>
+</html>
