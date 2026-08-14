@@ -362,8 +362,39 @@
           <ul class="references">
             <li>
               <a href="https://arxiv.org/abs/2006.11239"
-                >Denoising Diffusion Probabilistic Models</a
-              >
+                >Ho, Jain &amp; Abbeel, Denoising Diffusion Probabilistic
+                Models (2020)</a
+              >&mdash;the sampler this post is trying to justify: every reverse
+              step draws from a Gaussian, and noise is injected on the way
+              down.
+            </li>
+            <li>
+              <a href="https://arxiv.org/abs/1503.03585"
+                >Sohl-Dickstein et al., Deep Unsupervised Learning using
+                Nonequilibrium Thermodynamics (2015), section 2.1</a
+              >&mdash;makes the same small-step argument, citing Feller: for a
+              small enough step, the reverse conditional keeps the functional
+              form of the forward one.
+            </li>
+            <li>
+              <a href="https://doi.org/10.1016/0304-4149(82)90051-5"
+                >Anderson, Reverse-Time Diffusion Equation Models (1982)</a
+              >&mdash;the continuous-time result my discrete approximation is
+              a shadow of, and where the reverse drift picks up a score term.
+            </li>
+            <li>
+              <a href="https://arxiv.org/abs/2011.13456"
+                >Song et al., Score-Based Generative Modeling through
+                Stochastic Differential Equations (2021)</a
+              >&mdash;uses Anderson's reversal to put the score inside the
+              sampler; the follow-up direction for the first open question.
+            </li>
+            <li>
+              <a href="https://arxiv.org/abs/2406.08929"
+                >Nakkiran et al., Step-by-Step Diffusion: An Elementary
+                Tutorial</a
+              >&mdash;covers this same small-step reasoning, and treats the
+              per-step drift and noise scales I skipped here.
             </li>
           </ul>
         </section>
