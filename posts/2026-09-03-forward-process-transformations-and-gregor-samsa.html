@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forward Process, Transformations, and Gregor Samsa | Juan Carlos</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["\\[", "\\]"]],
+        },
+        svg: {
+          fontCache: "global",
+        },
+      };
+    </script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+    ></script>
+  </head>
+  <body>
+    <main class="page post-page">
+      <nav class="nav post-nav-top">
+        <a href="../index.html">Home</a>
+        <a href="../projects.html">Projects</a>
+        <a href="../writing.html">Writing</a>
+        <a href="../about.html">About</a>
+      </nav>
+
+      <article class="post-content math-note">
+        <header class="post-header">
+          <p class="eyebrow">Research Log</p>
+          <h1>Forward Process, Transformations, and Gregor Samsa</h1>
+          <p class="post-meta">
+            September 3, 2026 · Diffusion · Gaussian transformations
+          </p>
+        </header>
+
+        <section class="post-section">
+          <h2>The Question</h2>
+          <p>
+            I can't help relating diffusion models to a Kafkaesque situation in
+            which Gregor Samsa—the image—awakes from <em>uneasy dreams</em>—the
+            forward process—to find himself <em>transformed</em> into an
+            insect: Gaussian noise. But unlike in <em>The Metamorphosis</em>,
+            diffusion models give us hope of reversing the transformation by
+            studying the nature of the corruption process.
+          </p>
+          <p>
+            In the
+            <a href="2026-07-16-transforming-random-variables.html"
+              >“Changing Variables Without Changing Probability”</a
+            >
+            post, we saw how to compute the probability density of a
+            transformation. Namely, given
+          </p>
+
+          <div class="math-block">
+            \[
+            X=g(Z),
+            \qquad
+            Z=g^{-1}(X),
+            \]
+          </div>
+
+          <p>then</p>
+
+          <div class="math-block">
+            \[
+            f_X(x)
+            =
+            f_Z(z)
+            \left|
+              \det\left(\frac{\partial z}{\partial x}\right)
+            \right|.
+            \]
+          </div>
+
+          <p>
+            Today, I want to address the open question I left there: how is
+            this transformation related to linear transformations?
+          </p>
+          <p>
+            Short answer: linear and affine transformations are particular
+            cases of these random-variable transformations. In this post, we'll
+            work with the transformation commonly implemented in a forward
+            diffusion process.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Why I Care</h2>
+          <p>
+            In a standard diffusion forward process, we take a sample from our
+            original data, \(x_0\), and convert it into a noisy sample at time
+            \(t\) using this formula:
+          </p>
+
+          <div class="math-block">
+            \[
+            x_t
+            =
+            \sqrt{\bar{\alpha}_t}\,x_0
+            +
+            \sqrt{1-\bar{\alpha}_t}\,\varepsilon,
+            \qquad
+            \varepsilon\sim\mathcal{N}(0,I).
+            \]
+          </div>
+
+          <p>
+            We select \(\bar{\alpha}_t\) in a way that, at later timesteps, we
+            have less of our original sample \(x_0\) and more of the generated
+            white noise \(\varepsilon\). As
+            \(\bar{\alpha}_T\to 0\), the conditional distribution of \(x_T\)
+            given \(x_0\) approaches \(\mathcal{N}(0,I)\).
+          </p>
+          <p>
+            A beneficial property of this formula is that, conditioned on
+            \(x_0\), the resulting \(x_t\) is also normally distributed:
+          </p>
+
+          <div class="math-block">
+            \[
+            x_t\mid x_0
+            \sim
+            \mathcal{N}\!\left(
+              \sqrt{\bar{\alpha}_t}\,x_0,
+              (1-\bar{\alpha}_t)I
+            \right).
+            \]
+          </div>
+
+          <p>
+            The conditioning matters. If \(x_0\) is still random and comes from
+            the entire data distribution, then \(x_t\) is generally not
+            Gaussian at a finite timestep.
+          </p>
+
+          <p>So it has</p>
+
+          <div class="math-block">
+            \[
+            \text{mean:}\quad
+            \mu_t=\sqrt{\bar{\alpha}_t}\,x_0,
+            \]
+          </div>
+
+          <div class="math-block">
+            \[
+            \text{standard deviation:}\quad
+            \sigma_t=\sqrt{1-\bar{\alpha}_t},
+            \]
+          </div>
+
+          <div class="math-block">
+            \[
+            \text{covariance:}\quad
+            \Sigma_t=\sigma_t^2 I=(1-\bar{\alpha}_t)I.
+            \]
+          </div>
+
+          <p>
+            The identity matrix appears because
+            \(\varepsilon\sim\mathcal{N}(0,I)\) has independent, unit-variance
+            coordinates. Multiplying it by the scalar variance gives the
+            simpler isotropic covariance usually chosen in diffusion models.
+            In
+            <a href="2026-07-09-when-the-score-does-not-point-straight-to-the-mean.html"
+              >“When the Score Does Not Point Straight to the Mean.”</a
+            >
+            the covariance was not isotropic, which is why the score could tilt
+            away from the mean.
+          </p>
+          <p>
+            In general, instead of sampling directly from
+            \(\mathcal{N}(\mu,\sigma^2)\), we can sample from a standard normal
+            \(\mathcal{N}(0,1)\) and use the reparameterization trick:
+          </p>
+
+          <div class="math-block">
+            \[
+            X=\mu+\sigma\varepsilon,
+            \qquad
+            \varepsilon\sim\mathcal{N}(0,1),
+            \qquad
+            X\sim\mathcal{N}(\mu,\sigma^2).
+            \]
+          </div>
+
+          <p>Let's dive deeper into these ideas.</p>
+        </section>
+
+        <section class="post-section">
+          <h2>Setup and Definitions</h2>
+          <p>
+            The following table presents the probability densities of Gaussian
+            distributions in the univariate and multivariate cases.
+          </p>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Univariate</th>
+                  <th>Multivariate</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th>Standard</th>
+                  <td>
+                    \(f_Z(z)=\dfrac{1}{\sqrt{2\pi}}
+                    e^{-z^2/2}\)
+                  </td>
+                  <td>
+                    \(f_Z(z)=\dfrac{1}{(2\pi)^{d/2}}
+                    e^{-z^Tz/2}\)
+                  </td>
+                </tr>
+                <tr>
+                  <th>General</th>
+                  <td>
+                    \(f_X(x)=\dfrac{1}{\sqrt{2\pi}\,\sigma}
+                    e^{-(x-\mu)^2/(2\sigma^2)}\)
+                  </td>
+                  <td>
+                    \(f_X(x)=\dfrac{1}{(2\pi)^{d/2}|\Sigma|^{1/2}}
+                    \exp\!\left[-\dfrac{1}{2}(x-\mu)^T
+                    \Sigma^{-1}(x-\mu)\right]\)
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <p>
+            Here, \(\Sigma\) is the covariance matrix. Covariance matrices are
+            always symmetric positive semidefinite. The presented formula of
+            the multivariate normal also requires \(\Sigma^{-1}\) to exist,
+            which rules out zero-variance directions and makes \(\Sigma\)
+            positive definite. Therefore, we can
+            <a href="https://www.3blue1brown.com/lessons/eigenvalues/"
+              >diagonalize it via its eigendecomposition</a
+            >:
+          </p>
+
+          <div class="math-block">
+            \[
+            \Sigma=Q\Lambda Q^T,
+            \]
+          </div>
+
+          <p>
+            where \(Q\) has orthonormal columns—the eigenvectors—and
+            \(\Lambda\) is a diagonal matrix of the eigenvalues, which are
+            positive.
+          </p>
+          <p>
+            I might write a post explaining this better, but take it as a fact
+            if you are unfamiliar with this concept. Luckily, this
+            factorization has a very nice geometric interpretation. For our
+            covariance-matrix decomposition with orthonormal columns in \(Q\),
+            we read the transformation from right to left:
+          </p>
+
+          <div class="math-block">
+            \[
+            z
+            \xrightarrow{\;Q^T\;}
+            Q^Tz
+            \xrightarrow{\;\Lambda\;}
+            \Lambda Q^Tz
+            \xrightarrow{\;Q\;}
+            Q\Lambda Q^Tz.
+            \]
+          </div>
+
+          <p>
+            First \(Q^T\) changes to the principal-axis basis,
+            \(\Lambda\) scales in that basis, and \(Q\) rotates back to the
+            standard basis. This describes how \(\Sigma\) itself acts on an
+            arbitrary vector. To generate Gaussian samples, we will instead
+            use a covariance factor \(B\) satisfying \(BB^T=\Sigma\).
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Minimal Derivation</h2>
+          <p>
+            We'll explore the transformation of the random variable
+            \(Z\sim\mathcal{N}(0,I)\), for invertible \(B\), given by
+          </p>
+
+          <div class="math-block">
+            \[
+            X=\mu+BZ,
+            \qquad
+            Z\sim\mathcal{N}(0,I).
+            \]
+          </div>
+
+          <p>
+            Notice the connection here with the forward diffusion process
+            presented in the “Why I Care” section:
+          </p>
+
+          <div class="math-block">
+            \[
+            x_t
+            =
+            \sqrt{\bar{\alpha}_t}\,x_0
+            +
+            \sqrt{1-\bar{\alpha}_t}\,\varepsilon,
+            \qquad
+            \varepsilon\sim\mathcal{N}(0,I).
+            \]
+          </div>
+
+          <p>
+            Conditioned on \(x_0\), this is exactly the affine map
+            \(X=\mu+BZ\), with
+          </p>
+
+          <div class="math-block">
+            \[
+            Z=\varepsilon,
+            \qquad
+            \mu=\sqrt{\bar{\alpha}_t}\,x_0,
+            \qquad
+            B=\sqrt{1-\bar{\alpha}_t}\,I,
+            \qquad
+            |\det B|=(1-\bar{\alpha}_t)^{d/2}.
+            \]
+          </div>
+
+          <p>We first check the mean:</p>
+
+          <div class="math-block">
+            \[
+            \mathbb{E}[X]
+            =\mathbb{E}[\mu+BZ]
+            =\mu+B\mathbb{E}[Z]
+            =\mu.
+            \]
+          </div>
+
+          <p>We also find the covariance of \(X\):</p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            \operatorname{Cov}(X)
+            &=\operatorname{Cov}(\mu+BZ) \\
+            &=\operatorname{Cov}(BZ) \\
+            &=B\operatorname{Cov}(Z)B^T \\
+            &=BIB^T \\
+            &=BB^T,
+            \end{aligned}
+            \]
+          </div>
+
+          <p>since \(\mu\) is a constant shift and \(Z\sim\mathcal{N}(0,I)\).</p>
+          <p>
+            Recall the change-of-variables formula from “The Question”:
+          </p>
+
+          <div class="math-block">
+            \[
+            X=g(Z),
+            \qquad
+            Z=g^{-1}(X),
+            \qquad
+            f_X(x)=f_Z(g^{-1}(x))
+            \left|
+              \det\left(\frac{\partial g^{-1}(x)}{\partial x}\right)
+            \right|.
+            \]
+          </div>
+
+          <p>Replacing the values of our transformation,</p>
+
+          <div class="math-block">
+            \[
+            X=\mu+BZ,
+            \qquad
+            Z=B^{-1}(X-\mu),
+            \qquad
+            \frac{\partial z}{\partial x}=B^{-1}.
+            \]
+          </div>
+
+          <p>So</p>
+
+          <div class="math-block">
+            \[
+            f_X(x)
+            =
+            f_Z\!\left(B^{-1}(x-\mu)\right)
+            \frac{1}{|\det B|}.
+            \]
+          </div>
+
+          <p>
+            Here we used \(|\det B^{-1}|=1/|\det B|\).
+          </p>
+
+          <p>
+            We substitute the formula for the multivariate standard normal from
+            the table:
+          </p>
+
+          <div class="math-block">
+            \[
+            f_X(x)
+            =
+            \frac{1}{(2\pi)^{d/2}}
+            \exp\!\left(
+              -\frac{1}{2}
+              [B^{-1}(x-\mu)]^T[B^{-1}(x-\mu)]
+            \right)
+            \frac{1}{|\det B|}.
+            \]
+          </div>
+
+          <p>And</p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            [B^{-1}(x-\mu)]^T[B^{-1}(x-\mu)]
+            &=(x-\mu)^T(B^{-1})^TB^{-1}(x-\mu) \\
+            &=(x-\mu)^T(BB^T)^{-1}(x-\mu).
+            \end{aligned}
+            \]
+          </div>
+
+          <p>
+            The term \(BB^T\) matches what we found for the covariance of
+            \(X\), so \(BB^T=\Sigma\). Also,
+          </p>
+
+          <div class="math-block">
+            \[
+            \det(BB^T)=(\det B)^2=\det\Sigma,
+            \qquad
+            |\det B|=|\Sigma|^{1/2}.
+            \]
+          </div>
+
+          <p>Then</p>
+
+          <div class="math-block">
+            \[
+            f_X(x)
+            =
+            \frac{1}{(2\pi)^{d/2}|\Sigma|^{1/2}}
+            \exp\!\left[
+              -\frac{1}{2}(x-\mu)^T\Sigma^{-1}(x-\mu)
+            \right].
+            \]
+          </div>
+
+          <p>
+            Yes! This is our exact formula for the general multivariate
+            Gaussian from the table. We just showed how to generate a general
+            multivariate Gaussian from a standard normal. This is why Gaussian
+            distributions are closed under affine transformations: scaling,
+            rotating, and shifting a Gaussian random variable keeps us in the
+            Gaussian family. If there is no shift, the transformation is
+            linear. We can also confirm that the forward expression
+          </p>
+
+          <div class="math-block">
+            \[
+            x_t
+            =
+            \sqrt{\bar{\alpha}_t}\,x_0
+            +
+            \sqrt{1-\bar{\alpha}_t}\,\varepsilon
+            \]
+          </div>
+
+          <p>
+            means that \(x_t\mid x_0\) is normally distributed with mean
+            \(\sqrt{\bar{\alpha}_t}\,x_0\) and isotropic covariance
+            \((1-\bar{\alpha}_t)I\).
+          </p>
+          <p>
+            Going back to our diagonalization, we want
+            \(\Sigma=Q\Lambda Q^T\) and \(\Sigma=BB^T\). These are two related
+            but different maps. The diagonal entries of \(\Lambda\) are
+            variances, while those of \(\Lambda^{1/2}\) are standard
+            deviations. Applying \(\Sigma\) to an arbitrary vector uses
+            \(Q^T\), then \(\Lambda\), then \(Q\). To generate samples, we only
+            need a factor \(B\) such that \(BB^T=\Sigma\). Because standard
+            Gaussian noise has no preferred orientation,
+            \(Q^TZ\overset{d}{=}Z\), so the first rotation does not change its
+            distribution. This is why we can begin by scaling. One possible
+            factor is
+          </p>
+
+          <div class="math-block">
+            \[
+            B=Q\Lambda^{1/2},
+            \]
+          </div>
+
+          <p>such that</p>
+
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            BB^T
+            &=Q\Lambda^{1/2}(Q\Lambda^{1/2})^T \\
+            &=Q\Lambda^{1/2}\Lambda^{1/2}Q^T \\
+            &=Q\Lambda Q^T.
+            \end{aligned}
+            \]
+          </div>
+
+          <p>So our transformation becomes</p>
+
+          <div class="math-block">
+            \[
+            X=\mu+Q\Lambda^{1/2}Z.
+            \]
+          </div>
+
+          <p>
+            Geometrically, we generate noise centered at zero, stretch it by
+            \(\Lambda^{1/2}\), rotate it by \(Q\), and shift everything by
+            \(\mu\).
+          </p>
+          <p>
+            Translation does not change volume, and the orthogonal matrix
+            satisfies \(|\det Q|=1\), so only the scaling changes it:
+          </p>
+
+          <div class="math-block">
+            \[
+            |\det B|
+            =|\det Q|\det(\Lambda^{1/2})
+            =\prod_i\sqrt{\lambda_i}.
+            \]
+          </div>
+          <p>
+            From a linear-algebra or geometric point of view, \(B\) tells us
+            what happens to points and space, as shown in the beautiful videos
+            of the
+            <a href="https://www.3blue1brown.com/lessons/linear-transformations/"
+              >3Blue1Brown linear algebra series</a
+            >. From probability, we know that the same event must have the same
+            probability after the transformation, so we must compensate for
+            the change in space produced by \(B\). In effect,
+          </p>
+
+          <div class="math-block">
+            \[
+            \text{volume or area scales by }|\det B|
+            \quad\Longleftrightarrow\quad
+            \text{density scales by }\frac{1}{|\det B|}.
+            \]
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>Visualizing the Transformation</h2>
+          <p>
+            First, transform one fixed sample of standard Gaussian noise by
+            scaling, rotating, and shifting it. Then use the same linear map on
+            a grid cell to see why area and density must change in opposite
+            directions.
+          </p>
+
+          <div class="interactive-breakout">
+            <iframe
+              class="score-playground-frame"
+              data-gaussian-transform-playground
+              src="../assets/posts/gaussian-affine-transformation-playground.html"
+              title="Interactive Gaussian affine transformation and Jacobian playground"
+              loading="lazy"
+            ></iframe>
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>What I Think I Learned</h2>
+          <p>
+            The key idea of this post is the connection between random-variable
+            transformations and their geometric interpretation using linear
+            algebra. We saw the specific affine transformation implemented in
+            the forward process and why we use the Jacobian in the transformed
+            density: we need to account for the change in area or volume
+            introduced by the transformation so the probability mass remains
+            the same.
+          </p>
+          <p>
+            In that quest, we talked about the reparameterization trick, how to
+            generate Gaussian noise from standard Gaussian noise, and mentioned
+            some properties of the covariance matrix. I know it was a lot, but
+            I hope that writing and reading these ideas is helpful for
+            solidifying the building blocks of state-of-the-art generative
+            models.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Open Questions</h2>
+          <ul>
+            <li>
+              If \(B\) is not unique—for example, a Cholesky factor can produce
+              the same \(\Sigma\)—does the choice matter?
+            </li>
+            <li>
+              Conditioned on \(x_0\), \(x_{t-1}\) and \(x_t\) are jointly
+              Gaussian. How does conditioning give us the reverse step's mean
+              and covariance?
+            </li>
+            <li>Can we get Gregor back?</li>
+          </ul>
+        </section>
+
+        <section class="post-section">
+          <h2>References</h2>
+          <ul class="references">
+            <li>
+              <a href="2026-07-16-transforming-random-variables.html"
+                >Changing Variables Without Changing Probability</a
+              >—the earlier derivation of the change-of-variables formula used
+              in this post.
+            </li>
+            <li>
+              <a href="2026-07-02-denoising-is-not-inversion.html"
+                >Denoising Is Not Inversion</a
+              >—the earlier distinction between reversing corruption and
+              recovering the exact original sample.
+            </li>
+            <li>
+              <a href="https://www.3blue1brown.com/lessons/linear-transformations/"
+                >3Blue1Brown, Linear transformations and matrices</a
+              >—a visual introduction to reading matrices as transformations
+              of space.
+            </li>
+            <li>
+              <a href="https://www.3blue1brown.com/lessons/determinant/"
+                >3Blue1Brown, The determinant</a
+              >—the area-scaling interpretation of \(|\det B|\).
+            </li>
+            <li>
+              <a href="https://www.3blue1brown.com/lessons/eigenvalues/"
+                >3Blue1Brown, Eigenvectors and eigenvalues</a
+              >—a visual resource for the eigendecomposition used here.
+            </li>
+            <li>
+              <a href="https://arxiv.org/abs/2006.11239"
+                >Ho, Jain &amp; Abbeel, Denoising Diffusion Probabilistic
+                Models (2020)</a
+              >—the forward-process marginal used in this post.
+            </li>
+          </ul>
+        </section>
+      </article>
+
+      <p class="post-nav"><a href="../writing.html">Back to writing</a></p>
+
+      <footer class="footer">
+        <p>Find me online or get in touch.</p>
+        <div class="links">
+          <a href="https://github.com/juancopi81">GitHub</a>
+          <a href="https://huggingface.co/juancopi81">Hugging Face</a>
+          <a href="https://www.linkedin.com/in/juancarlospinerosp/">LinkedIn</a>
+          <a href="https://x.com/juancopi81">X / Twitter</a>
+          <a href="mailto:juancopi_81@hotmail.com">Email</a>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      const gaussianTransformPlayground = document.querySelector(
+        "[data-gaussian-transform-playground]",
+      );
+
+      window.addEventListener("message", (event) => {
+        if (
+          !gaussianTransformPlayground ||
+          event.source !== gaussianTransformPlayground.contentWindow ||
+          event.data?.type !== "gaussian-affine-transform:resize"
+        ) {
+          return;
+        }
+
+        const requestedHeight = Number(event.data.height);
+        if (!Number.isFinite(requestedHeight)) return;
+
+        const frameHeight = Math.max(940, Math.min(requestedHeight + 2, 4800));
+        gaussianTransformPlayground.style.height = `${frameHeight}px`;
+      });
+    </script>
+  </body>
+</html>

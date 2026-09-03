@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gaussian Affine Transformation Playground</title>
+    <style>
+      :root {
+        --bg: #fafafa;
+        --panel: #ffffff;
+        --text: #18181b;
+        --muted: #71717a;
+        --accent: #2563eb;
+        --accent-dark: #1d4ed8;
+        --accent-soft: #eff6ff;
+        --line: #e4e4e7;
+        --subtle: #f4f4f5;
+        --green: #15803d;
+        --green-soft: #f0fdf4;
+        --violet: #7c3aed;
+        --orange: #ea580c;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        overflow-x: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+
+      .wrap {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin-top: 0;
+      }
+
+      h1 {
+        margin-bottom: 6px;
+        font-size: 22px;
+        line-height: 1.25;
+      }
+
+      h2 {
+        margin-bottom: 6px;
+        font-size: 19px;
+        line-height: 1.3;
+      }
+
+      h3 {
+        margin-bottom: 4px;
+        font-size: 15px;
+        line-height: 1.35;
+      }
+
+      .subtitle,
+      .section-copy,
+      .small {
+        color: var(--muted);
+      }
+
+      .subtitle {
+        max-width: 920px;
+        margin-bottom: 18px;
+        font-size: 15px;
+      }
+
+      .section-copy {
+        max-width: 920px;
+        margin-bottom: 14px;
+        font-size: 14px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(150px, 1fr));
+        gap: 12px;
+        margin-bottom: 14px;
+        padding: 14px;
+      }
+
+      .control-group {
+        min-width: 0;
+        padding-right: 12px;
+        border-right: 1px solid var(--line);
+      }
+
+      .control-group:last-of-type {
+        padding-right: 0;
+        border-right: 0;
+      }
+
+      .control-group h3 {
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .slider-row + .slider-row {
+        margin-top: 9px;
+      }
+
+      .label-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+
+      label {
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      output {
+        min-width: 48px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        font-size: 12px;
+        text-align: right;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--accent);
+      }
+
+      input:focus-visible,
+      button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      button {
+        align-self: end;
+        min-height: 42px;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--subtle);
+        color: var(--text);
+        cursor: pointer;
+        font: inherit;
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      button:hover {
+        border-color: #a1a1aa;
+      }
+
+      .section {
+        padding: 16px;
+      }
+
+      .section + .section {
+        margin-top: 16px;
+      }
+
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .step {
+        min-width: 0;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        background: #fff;
+      }
+
+      .step-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        margin-right: 5px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent-dark);
+        font-size: 12px;
+        font-weight: 750;
+      }
+
+      .formula {
+        min-height: 42px;
+        margin: 6px 0 8px;
+        color: #3f3f46;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1 / 1;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: #fff;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(120px, 1fr));
+        gap: 9px;
+        margin-top: 12px;
+      }
+
+      .metric {
+        min-width: 0;
+        padding: 9px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--subtle);
+      }
+
+      .metric .key {
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .metric .value {
+        overflow-wrap: anywhere;
+        color: var(--text);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", monospace;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .jacobian-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(250px, 0.75fr);
+        gap: 12px;
+        align-items: stretch;
+      }
+
+      .jacobian-canvas {
+        aspect-ratio: 16 / 8;
+      }
+
+      .invariant {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 14px;
+        border: 1px solid #bbf7d0;
+        border-radius: 7px;
+        background: var(--green-soft);
+      }
+
+      .invariant h3 {
+        color: var(--green);
+      }
+
+      .equation {
+        margin: 10px 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", monospace;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.6;
+      }
+
+      .mass-check {
+        margin: 8px 0 0;
+        padding-top: 9px;
+        border-top: 1px solid #bbf7d0;
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .small {
+        margin-bottom: 0;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px 15px;
+        margin-top: 9px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .legend span::before {
+        content: "";
+        display: inline-block;
+        width: 13px;
+        height: 3px;
+        margin-right: 5px;
+        border-radius: 4px;
+        background: currentColor;
+        vertical-align: middle;
+      }
+
+      .legend .grid {
+        color: #a1a1aa;
+      }
+
+      .legend .cell {
+        color: var(--orange);
+      }
+
+      .legend .basis {
+        color: var(--violet);
+      }
+
+      .live {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      @media (max-width: 980px) {
+        .controls {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .control-group {
+          padding: 0 0 10px;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .steps {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .jacobian-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .metrics {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 580px) {
+        .wrap {
+          padding: 14px;
+        }
+
+        .controls,
+        .steps,
+        .metrics {
+          grid-template-columns: 1fr;
+        }
+
+        .step canvas {
+          aspect-ratio: 6 / 5;
+        }
+
+        .jacobian-canvas {
+          aspect-ratio: 4 / 5;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>From Standard Noise to a General Gaussian</h1>
+      <p class="subtitle">
+        One fixed cloud travels through the affine map
+        <strong>X = μ + QΛ<sup>1/2</sup>Z</strong>. The four panels isolate each
+        operation; the second section follows what the same map does to area and
+        density.
+      </p>
+
+      <div class="panel controls" aria-label="Transformation controls">
+        <div class="control-group">
+          <h3>Scale Λ<sup>1/2</sup></h3>
+          <div class="slider-row">
+            <div class="label-row">
+              <label for="scaleX">√λ<sub>x</sub></label>
+              <output id="scaleXValue" for="scaleX">1.60</output>
+            </div>
+            <input id="scaleX" type="range" min="0.5" max="2.5" step="0.05" value="1.6" />
+          </div>
+          <div class="slider-row">
+            <div class="label-row">
+              <label for="scaleY">√λ<sub>y</sub></label>
+              <output id="scaleYValue" for="scaleY">0.75</output>
+            </div>
+            <input id="scaleY" type="range" min="0.5" max="2.5" step="0.05" value="0.75" />
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h3>Rotate Q</h3>
+          <div class="slider-row">
+            <div class="label-row">
+              <label for="angle">Angle θ</label>
+              <output id="angleValue" for="angle">30°</output>
+            </div>
+            <input id="angle" type="range" min="-90" max="90" step="1" value="30" />
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h3>Shift μ</h3>
+          <div class="slider-row">
+            <div class="label-row">
+              <label for="muX">μ<sub>x</sub></label>
+              <output id="muXValue" for="muX">1.20</output>
+            </div>
+            <input id="muX" type="range" min="-2.5" max="2.5" step="0.1" value="1.2" />
+          </div>
+          <div class="slider-row">
+            <div class="label-row">
+              <label for="muY">μ<sub>y</sub></label>
+              <output id="muYValue" for="muY">-0.80</output>
+            </div>
+            <input id="muY" type="range" min="-2.5" max="2.5" step="0.1" value="-0.8" />
+          </div>
+        </div>
+
+        <div class="control-group">
+          <h3>What stays fixed</h3>
+          <p class="small">
+            The seeded standard-normal sample is identical in all four panels.
+            Only the displayed transformation changes.
+          </p>
+        </div>
+
+        <button id="reset" type="button">Reset controls</button>
+      </div>
+
+      <section class="panel section" aria-labelledby="sectionOneTitle">
+        <h2 id="sectionOneTitle">1. Build the affine transformation</h2>
+        <p class="section-copy">
+          Matrix products act from right to left: scale first with
+          Λ<sup>1/2</sup>, rotate with the orthogonal matrix Q, then add μ.
+          Because Z ~ N(0, I) has no preferred orientation, we can treat its
+          current coordinates as principal-axis coordinates and begin with the
+          scaling step.
+        </p>
+
+        <div class="steps">
+          <article class="step">
+            <h3><span class="step-number">1</span>Standard noise</h3>
+            <p class="formula">Z ~ N(0, I)</p>
+            <canvas id="standardCanvas" aria-label="Fixed sample of standard two-dimensional Gaussian noise"></canvas>
+          </article>
+
+          <article class="step">
+            <h3><span class="step-number">2</span>Scale the axes</h3>
+            <p class="formula">Y = Λ<sup>1/2</sup>Z</p>
+            <canvas id="scaledCanvas" aria-label="Gaussian sample scaled independently along x and y"></canvas>
+          </article>
+
+          <article class="step">
+            <h3><span class="step-number">3</span>Rotate</h3>
+            <p class="formula">W = QΛ<sup>1/2</sup>Z</p>
+            <canvas id="rotatedCanvas" aria-label="Scaled Gaussian sample rotated by an orthogonal matrix Q"></canvas>
+          </article>
+
+          <article class="step">
+            <h3><span class="step-number">4</span>Shift the mean</h3>
+            <p class="formula">X = μ + QΛ<sup>1/2</sup>Z</p>
+            <canvas id="shiftedCanvas" aria-label="Scaled and rotated Gaussian sample shifted by mu"></canvas>
+          </article>
+        </div>
+
+        <div class="metrics" aria-label="Transformation metrics">
+          <div class="metric">
+            <div class="key">B = QΛ<sup>1/2</sup></div>
+            <div class="value" id="matrixB">—</div>
+          </div>
+          <div class="metric">
+            <div class="key">Σ = BBᵀ</div>
+            <div class="value" id="covariance">—</div>
+          </div>
+          <div class="metric">
+            <div class="key">det Q</div>
+            <div class="value" id="detQ">1.000</div>
+          </div>
+          <div class="metric">
+            <div class="key">|det B| = √λ<sub>x</sub>√λ<sub>y</sub></div>
+            <div class="value" id="detB">—</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel section" aria-labelledby="sectionTwoTitle">
+        <h2 id="sectionTwoTitle">2. Why the Jacobian changes density</h2>
+        <p class="section-copy">
+          The highlighted cell is enlarged so we can see it; treat it as a
+          stand-in for the local differential area dA<sub>z</sub>. Under B it
+          becomes a parallelogram with area dA<sub>x</sub> = |det B|
+          dA<sub>z</sub>. Translation moves the grid but does not change its
+          area.
+        </p>
+
+        <div class="jacobian-layout">
+          <div>
+            <canvas
+              id="jacobianCanvas"
+              class="jacobian-canvas"
+              aria-label="Source grid and its affine transformation showing a selected cell expanding or shrinking by the determinant"
+            ></canvas>
+            <div class="legend" aria-hidden="true">
+              <span class="grid">Grid</span>
+              <span class="cell">Differential cell</span>
+              <span class="basis">Transformed basis vectors</span>
+            </div>
+          </div>
+
+          <aside class="invariant">
+            <h3>Probability mass stays the same</h3>
+            <div class="equation">
+              dA<sub>x</sub> = <span id="areaScale">—</span>
+              dA<sub>z</sub><br />
+              f<sub>X</sub>(x) = f<sub>Z</sub>(z) /
+              <span id="densityDivisor">—</span>
+            </div>
+            <p class="small">
+              At the center, z = 0 maps to x = μ. The displayed products are a
+              local differential mass-element check, not the exact integral
+              over the visible finite cell:
+            </p>
+            <div class="equation">
+              <span id="sourceDensity">—</span> ×
+              <span id="sourceArea">—</span><br />
+              = <span id="targetDensity">—</span> ×
+              <span id="targetArea">—</span>
+            </div>
+            <p class="mass-check" id="massCheck">Local mass-element check: —</p>
+          </aside>
+        </div>
+      </section>
+
+      <p class="live" id="liveSummary" aria-live="polite"></p>
+    </main>
+
+    <script>
+      (() => {
+        "use strict";
+
+        const COLORS = {
+          axis: "#a1a1aa",
+          grid: "#e4e4e7",
+          point: "#2563eb",
+          pointSoft: "rgba(37, 99, 235, 0.42)",
+          mean: "#dc2626",
+          cell: "rgba(234, 88, 12, 0.23)",
+          cellLine: "#ea580c",
+          basis: "#7c3aed",
+          label: "#52525b",
+          background: "#ffffff",
+        };
+
+        const DEFAULTS = {
+          scaleX: 1.6,
+          scaleY: 0.75,
+          angle: 30,
+          muX: 1.2,
+          muY: -0.8,
+        };
+        const CELL_SIDE = 0.4;
+        const SOURCE_AREA = (2 * CELL_SIDE) ** 2;
+        const STANDARD_DENSITY_AT_ZERO = 1 / (2 * Math.PI);
+
+        const elements = {
+          scaleX: document.querySelector("#scaleX"),
+          scaleY: document.querySelector("#scaleY"),
+          angle: document.querySelector("#angle"),
+          muX: document.querySelector("#muX"),
+          muY: document.querySelector("#muY"),
+          scaleXValue: document.querySelector("#scaleXValue"),
+          scaleYValue: document.querySelector("#scaleYValue"),
+          angleValue: document.querySelector("#angleValue"),
+          muXValue: document.querySelector("#muXValue"),
+          muYValue: document.querySelector("#muYValue"),
+          reset: document.querySelector("#reset"),
+          standardCanvas: document.querySelector("#standardCanvas"),
+          scaledCanvas: document.querySelector("#scaledCanvas"),
+          rotatedCanvas: document.querySelector("#rotatedCanvas"),
+          shiftedCanvas: document.querySelector("#shiftedCanvas"),
+          jacobianCanvas: document.querySelector("#jacobianCanvas"),
+          matrixB: document.querySelector("#matrixB"),
+          covariance: document.querySelector("#covariance"),
+          detQ: document.querySelector("#detQ"),
+          detB: document.querySelector("#detB"),
+          areaScale: document.querySelector("#areaScale"),
+          densityDivisor: document.querySelector("#densityDivisor"),
+          sourceDensity: document.querySelector("#sourceDensity"),
+          targetDensity: document.querySelector("#targetDensity"),
+          sourceArea: document.querySelector("#sourceArea"),
+          targetArea: document.querySelector("#targetArea"),
+          massCheck: document.querySelector("#massCheck"),
+          liveSummary: document.querySelector("#liveSummary"),
+        };
+
+        function mulberry32(seed) {
+          return function random() {
+            let value = (seed += 0x6d2b79f5);
+            value = Math.imul(value ^ (value >>> 15), value | 1);
+            value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+            return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+
+        function standardNormalPoints(count, seed) {
+          const random = mulberry32(seed);
+          const points = [];
+          let spare = null;
+          function standardNormal() {
+            if (spare !== null) {
+              const value = spare;
+              spare = null;
+              return value;
+            }
+            const u1 = Math.max(random(), Number.EPSILON);
+            const u2 = random();
+            const radius = Math.sqrt(-2 * Math.log(u1));
+            const angle = 2 * Math.PI * u2;
+            spare = radius * Math.sin(angle);
+            return radius * Math.cos(angle);
+          }
+          while (points.length < count) {
+            points.push([standardNormal(), standardNormal()]);
+          }
+          return points;
+        }
+
+        const points = standardNormalPoints(360, 20260903);
+
+        function currentState() {
+          const scaleX = Number(elements.scaleX.value);
+          const scaleY = Number(elements.scaleY.value);
+          const angleDegrees = Number(elements.angle.value);
+          const angle = (angleDegrees * Math.PI) / 180;
+          const muX = Number(elements.muX.value);
+          const muY = Number(elements.muY.value);
+          const cosine = Math.cos(angle);
+          const sine = Math.sin(angle);
+          const Q = [
+            [cosine, -sine],
+            [sine, cosine],
+          ];
+          const B = [
+            [cosine * scaleX, -sine * scaleY],
+            [sine * scaleX, cosine * scaleY],
+          ];
+          const covariance = [
+            [
+              B[0][0] * B[0][0] + B[0][1] * B[0][1],
+              B[0][0] * B[1][0] + B[0][1] * B[1][1],
+            ],
+            [
+              B[1][0] * B[0][0] + B[1][1] * B[0][1],
+              B[1][0] * B[1][0] + B[1][1] * B[1][1],
+            ],
+          ];
+          const detQ = Q[0][0] * Q[1][1] - Q[0][1] * Q[1][0];
+          const detB = Math.abs(B[0][0] * B[1][1] - B[0][1] * B[1][0]);
+          return {
+            scaleX,
+            scaleY,
+            angleDegrees,
+            muX,
+            muY,
+            Q,
+            B,
+            covariance,
+            detQ,
+            detB,
+          };
+        }
+
+        function linearTransform(point, matrix) {
+          return [
+            matrix[0][0] * point[0] + matrix[0][1] * point[1],
+            matrix[1][0] * point[0] + matrix[1][1] * point[1],
+          ];
+        }
+
+        function addShift(point, state) {
+          return [point[0] + state.muX, point[1] + state.muY];
+        }
+
+        function fitCanvas(canvas) {
+          const bounds = canvas.getBoundingClientRect();
+          const ratio = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+          const width = Math.max(220, Math.round(bounds.width));
+          const height = Math.max(180, Math.round(bounds.height));
+          canvas.width = Math.round(width * ratio);
+          canvas.height = Math.round(height * ratio);
+          const context = canvas.getContext("2d");
+          context.setTransform(ratio, 0, 0, ratio, 0, 0);
+          return { context, width, height };
+        }
+
+        function mapper(width, height, domain) {
+          const padding = Math.max(19, Math.min(width, height) * 0.09);
+          const scale = Math.min(
+            (width - 2 * padding) / (domain.maxX - domain.minX),
+            (height - 2 * padding) / (domain.maxY - domain.minY),
+          );
+          const centerX = width / 2;
+          const centerY = height / 2;
+          const worldCenterX = (domain.minX + domain.maxX) / 2;
+          const worldCenterY = (domain.minY + domain.maxY) / 2;
+          return (point) => [
+            centerX + (point[0] - worldCenterX) * scale,
+            centerY - (point[1] - worldCenterY) * scale,
+          ];
+        }
+
+        function drawArrow(context, start, end, color) {
+          const angle = Math.atan2(end[1] - start[1], end[0] - start[0]);
+          context.save();
+          context.strokeStyle = color;
+          context.fillStyle = color;
+          context.lineWidth = 1.7;
+          context.beginPath();
+          context.moveTo(start[0], start[1]);
+          context.lineTo(end[0], end[1]);
+          context.stroke();
+          context.beginPath();
+          context.moveTo(end[0], end[1]);
+          context.lineTo(
+            end[0] - 7 * Math.cos(angle - Math.PI / 6),
+            end[1] - 7 * Math.sin(angle - Math.PI / 6),
+          );
+          context.lineTo(
+            end[0] - 7 * Math.cos(angle + Math.PI / 6),
+            end[1] - 7 * Math.sin(angle + Math.PI / 6),
+          );
+          context.closePath();
+          context.fill();
+          context.restore();
+        }
+
+        function drawAxes(context, map, extent = 4) {
+          const left = map([-extent, 0]);
+          const right = map([extent, 0]);
+          const bottom = map([0, -extent]);
+          const top = map([0, extent]);
+          context.save();
+          context.strokeStyle = COLORS.grid;
+          context.lineWidth = 1;
+          const gridStep = extent > 7 ? 2 : 1;
+          const gridLimit = Math.floor(extent / gridStep) * gridStep;
+          for (let value = -gridLimit; value <= gridLimit; value += gridStep) {
+            const a = map([value, -extent]);
+            const b = map([value, extent]);
+            context.beginPath();
+            context.moveTo(a[0], a[1]);
+            context.lineTo(b[0], b[1]);
+            context.stroke();
+            const c = map([-extent, value]);
+            const d = map([extent, value]);
+            context.beginPath();
+            context.moveTo(c[0], c[1]);
+            context.lineTo(d[0], d[1]);
+            context.stroke();
+          }
+          context.strokeStyle = COLORS.axis;
+          context.beginPath();
+          context.moveTo(left[0], left[1]);
+          context.lineTo(right[0], right[1]);
+          context.moveTo(bottom[0], bottom[1]);
+          context.lineTo(top[0], top[1]);
+          context.stroke();
+          context.restore();
+        }
+
+        function drawCloud(canvas, transformedPoints, mean, extent) {
+          const { context, width, height } = fitCanvas(canvas);
+          context.clearRect(0, 0, width, height);
+          context.fillStyle = COLORS.background;
+          context.fillRect(0, 0, width, height);
+          const map = mapper(width, height, {
+            minX: -extent,
+            maxX: extent,
+            minY: -extent,
+            maxY: extent,
+          });
+          drawAxes(context, map, extent);
+          context.save();
+          context.fillStyle = COLORS.pointSoft;
+          for (const point of transformedPoints) {
+            const pixel = map(point);
+            context.beginPath();
+            context.arc(pixel[0], pixel[1], 2.1, 0, 2 * Math.PI);
+            context.fill();
+          }
+          context.restore();
+          const meanPixel = map(mean);
+          context.save();
+          context.strokeStyle = COLORS.mean;
+          context.lineWidth = 2;
+          context.beginPath();
+          context.moveTo(meanPixel[0] - 5, meanPixel[1]);
+          context.lineTo(meanPixel[0] + 5, meanPixel[1]);
+          context.moveTo(meanPixel[0], meanPixel[1] - 5);
+          context.lineTo(meanPixel[0], meanPixel[1] + 5);
+          context.stroke();
+          context.restore();
+        }
+
+        function polygon(context, points, fill, stroke, width = 1.6) {
+          context.save();
+          context.beginPath();
+          context.moveTo(points[0][0], points[0][1]);
+          for (let index = 1; index < points.length; index += 1) {
+            context.lineTo(points[index][0], points[index][1]);
+          }
+          context.closePath();
+          context.fillStyle = fill;
+          context.fill();
+          context.strokeStyle = stroke;
+          context.lineWidth = width;
+          context.stroke();
+          context.restore();
+        }
+
+        function drawJacobian(state) {
+          const canvas = elements.jacobianCanvas;
+          const { context, width, height } = fitCanvas(canvas);
+          context.clearRect(0, 0, width, height);
+          context.fillStyle = COLORS.background;
+          context.fillRect(0, 0, width, height);
+
+          const stacked = width < 560;
+          const viewports = stacked
+            ? [
+                { x: 0, y: 0, width, height: height / 2 - 8 },
+                { x: 0, y: height / 2 + 8, width, height: height / 2 - 8 },
+              ]
+            : [
+                { x: 0, y: 0, width: width / 2 - 8, height },
+                { x: width / 2 + 8, y: 0, width: width / 2 - 8, height },
+              ];
+
+          const transformedCorners = [
+            [-3.2, -3.2],
+            [3.2, -3.2],
+            [3.2, 3.2],
+            [-3.2, 3.2],
+          ].map((point) => addShift(linearTransform(point, state.B), state));
+          const targetExtent = Math.max(
+            4.4,
+            ...transformedCorners.flatMap(([x, y]) => [Math.abs(x) + 0.6, Math.abs(y) + 0.6]),
+          );
+          const sharedWorld = {
+            minX: -targetExtent,
+            maxX: targetExtent,
+            minY: -targetExtent,
+            maxY: targetExtent,
+          };
+          const viewportMapper = (viewport, world) => {
+            const localMap = mapper(viewport.width, viewport.height, world);
+            return (point) => {
+              const local = localMap(point);
+              return [local[0] + viewport.x, local[1] + viewport.y];
+            };
+          };
+          const sourceMap = viewportMapper(viewports[0], sharedWorld);
+          const targetMap = viewportMapper(viewports[1], sharedWorld);
+
+          context.save();
+          context.strokeStyle = COLORS.grid;
+          context.lineWidth = 1;
+          for (let value = -3.2; value <= 3.201; value += 0.8) {
+            let a = sourceMap([value, -3.2]);
+            let b = sourceMap([value, 3.2]);
+            context.beginPath();
+            context.moveTo(a[0], a[1]);
+            context.lineTo(b[0], b[1]);
+            context.stroke();
+            a = sourceMap([-3.2, value]);
+            b = sourceMap([3.2, value]);
+            context.beginPath();
+            context.moveTo(a[0], a[1]);
+            context.lineTo(b[0], b[1]);
+            context.stroke();
+
+            const transformedVerticalStart = addShift(
+              linearTransform([value, -3.2], state.B),
+              state,
+            );
+            const transformedVerticalEnd = addShift(
+              linearTransform([value, 3.2], state.B),
+              state,
+            );
+            a = targetMap(transformedVerticalStart);
+            b = targetMap(transformedVerticalEnd);
+            context.beginPath();
+            context.moveTo(a[0], a[1]);
+            context.lineTo(b[0], b[1]);
+            context.stroke();
+
+            const transformedHorizontalStart = addShift(
+              linearTransform([-3.2, value], state.B),
+              state,
+            );
+            const transformedHorizontalEnd = addShift(
+              linearTransform([3.2, value], state.B),
+              state,
+            );
+            a = targetMap(transformedHorizontalStart);
+            b = targetMap(transformedHorizontalEnd);
+            context.beginPath();
+            context.moveTo(a[0], a[1]);
+            context.lineTo(b[0], b[1]);
+            context.stroke();
+          }
+          context.restore();
+
+          const sourceCell = [
+            [-CELL_SIDE, -CELL_SIDE],
+            [CELL_SIDE, -CELL_SIDE],
+            [CELL_SIDE, CELL_SIDE],
+            [-CELL_SIDE, CELL_SIDE],
+          ];
+          const targetCell = sourceCell.map((point) =>
+            addShift(linearTransform(point, state.B), state),
+          );
+          polygon(
+            context,
+            sourceCell.map(sourceMap),
+            COLORS.cell,
+            COLORS.cellLine,
+          );
+          polygon(
+            context,
+            targetCell.map(targetMap),
+            COLORS.cell,
+            COLORS.cellLine,
+          );
+
+          const sourceOrigin = sourceMap([0, 0]);
+          const targetOrigin = targetMap([state.muX, state.muY]);
+          const basisX = targetMap(
+            addShift(linearTransform([1, 0], state.B), state),
+          );
+          const basisY = targetMap(
+            addShift(linearTransform([0, 1], state.B), state),
+          );
+          drawArrow(context, targetOrigin, basisX, COLORS.basis);
+          drawArrow(context, targetOrigin, basisY, COLORS.basis);
+
+          context.save();
+          context.fillStyle = COLORS.label;
+          context.font = "600 12px system-ui";
+          context.textAlign = "center";
+          context.fillText(
+            "Source z-space",
+            viewports[0].x + viewports[0].width / 2,
+            viewports[0].y + 18,
+          );
+          context.fillText(
+            "Target x-space",
+            viewports[1].x + viewports[1].width / 2,
+            viewports[1].y + 18,
+          );
+          context.fillStyle = COLORS.cellLine;
+          context.font = "700 11px system-ui";
+          context.fillText("dAᶻ", sourceOrigin[0], sourceOrigin[1] - 9);
+          context.fillText("dAˣ", targetOrigin[0], targetOrigin[1] - 9);
+          context.restore();
+        }
+
+        function format(number, digits = 2) {
+          const nearZero = Math.abs(number) < 0.5 * 10 ** -digits ? 0 : number;
+          return nearZero.toFixed(digits);
+        }
+
+        function matrixText(matrix) {
+          return `[[${format(matrix[0][0])}, ${format(matrix[0][1])}], [${format(matrix[1][0])}, ${format(matrix[1][1])}]]`;
+        }
+
+        function update() {
+          const state = currentState();
+          elements.scaleXValue.value = format(state.scaleX);
+          elements.scaleYValue.value = format(state.scaleY);
+          elements.angleValue.value = `${state.angleDegrees.toFixed(0)}°`;
+          elements.muXValue.value = format(state.muX);
+          elements.muYValue.value = format(state.muY);
+
+          const scaled = points.map(([x, y]) => [
+            state.scaleX * x,
+            state.scaleY * y,
+          ]);
+          const rotated = scaled.map((point) => linearTransform(point, state.Q));
+          const shifted = rotated.map((point) => addShift(point, state));
+          const commonExtent = Math.max(
+            5,
+            ...[points, scaled, rotated, shifted]
+              .flat()
+              .flatMap(([x, y]) => [Math.abs(x) + 0.5, Math.abs(y) + 0.5]),
+          );
+          drawCloud(elements.standardCanvas, points, [0, 0], commonExtent);
+          drawCloud(elements.scaledCanvas, scaled, [0, 0], commonExtent);
+          drawCloud(elements.rotatedCanvas, rotated, [0, 0], commonExtent);
+          drawCloud(
+            elements.shiftedCanvas,
+            shifted,
+            [state.muX, state.muY],
+            commonExtent,
+          );
+          drawJacobian(state);
+
+          const targetArea = SOURCE_AREA * state.detB;
+          const targetDensity = STANDARD_DENSITY_AT_ZERO / state.detB;
+          const sourceMass = STANDARD_DENSITY_AT_ZERO * SOURCE_AREA;
+          const targetMass = targetDensity * targetArea;
+          const massError = Math.abs(sourceMass - targetMass);
+
+          elements.matrixB.textContent = matrixText(state.B);
+          elements.covariance.textContent = matrixText(state.covariance);
+          elements.detQ.textContent = format(state.detQ, 3);
+          elements.detB.textContent = format(state.detB, 3);
+          elements.areaScale.textContent = format(state.detB, 3);
+          elements.densityDivisor.textContent = format(state.detB, 3);
+          elements.sourceDensity.textContent = format(STANDARD_DENSITY_AT_ZERO, 4);
+          elements.targetDensity.textContent = format(targetDensity, 4);
+          elements.sourceArea.textContent = format(SOURCE_AREA, 4);
+          elements.targetArea.textContent = format(targetArea, 4);
+          elements.massCheck.textContent =
+            `Local mass-element check: ${format(sourceMass, 6)} = ${format(targetMass, 6)} ` +
+            `(error ${massError.toExponential(1)})`;
+          elements.liveSummary.textContent =
+            `Scale factors ${format(state.scaleX)} and ${format(state.scaleY)}, ` +
+            `rotation ${state.angleDegrees.toFixed(0)} degrees, and shift ` +
+            `(${format(state.muX)}, ${format(state.muY)}). Area scales by ` +
+            `${format(state.detB, 3)} and density scales by ` +
+            `${format(1 / state.detB, 3)}, preserving the local probability mass.`;
+
+          window.__gaussianAffinePlayground = {
+            state,
+            invariants: {
+              seededPointCount: points.length,
+              detQError: Math.abs(state.detQ - 1),
+              determinantFactorizationError: Math.abs(
+                state.detB - state.scaleX * state.scaleY,
+              ),
+              massError,
+              sourceMass,
+              targetMass,
+              commonExtent,
+            },
+          };
+        }
+
+        for (const input of [
+          elements.scaleX,
+          elements.scaleY,
+          elements.angle,
+          elements.muX,
+          elements.muY,
+        ]) {
+          input.addEventListener("input", update);
+        }
+
+        elements.reset.addEventListener("click", () => {
+          for (const [key, value] of Object.entries(DEFAULTS)) {
+            elements[key].value = String(value);
+          }
+          update();
+        });
+
+        let resizeFrame = 0;
+        function redrawOnResize() {
+          cancelAnimationFrame(resizeFrame);
+          resizeFrame = requestAnimationFrame(update);
+        }
+        if ("ResizeObserver" in window) {
+          new ResizeObserver(redrawOnResize).observe(document.querySelector(".wrap"));
+        } else {
+          window.addEventListener("resize", redrawOnResize);
+        }
+
+        function reportHeight() {
+          if (window.parent === window) return;
+          const playground = document.querySelector(".wrap");
+          const height = playground
+            ? Math.ceil(playground.getBoundingClientRect().height)
+            : Math.ceil(document.body.scrollHeight);
+          window.parent.postMessage(
+            { type: "gaussian-affine-transform:resize", height },
+            "*",
+          );
+        }
+        window.addEventListener("load", reportHeight);
+        if ("ResizeObserver" in window) {
+          new ResizeObserver(reportHeight).observe(document.body);
+        }
+
+        update();
+        setTimeout(reportHeight, 100);
+      })();
+    </script>
+  </body>
+</html>
