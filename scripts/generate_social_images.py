@@ -71,7 +71,10 @@ def fit_title(draw, text: str, max_width: int, max_lines: int,
         if len(lines) <= max_lines:
             return fnt, lines, size
     fnt = font(floor, "Bold")
-    return fnt, wrap(draw, text, fnt, max_width)[:max_lines], floor
+    lines = wrap(draw, text, fnt, max_width)
+    if len(lines) > max_lines:
+        print(f"  warning: title clipped to {max_lines} lines -> {text!r}")
+    return fnt, lines[:max_lines], floor
 
 
 def base_card() -> tuple[Image.Image, ImageDraw.ImageDraw]:
