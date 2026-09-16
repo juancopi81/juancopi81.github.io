@@ -20,6 +20,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "assets" / "social"
+SITE = "https://juancopi81.github.io"
 
 W, H = 1200, 630
 MARGIN = 48          # gap between the canvas edge and the inner card
@@ -119,7 +120,7 @@ def render(out_name: str, *, eyebrow: str, title: str, meta: str,
         paste_figure(img, figure)
 
     y = draw_eyebrow(draw, x, MARGIN + PAD, eyebrow)
-    fnt, lines, size = fit_title(draw, title, text_width, 4 if figure else 3)
+    fnt, lines, size = fit_title(draw, title, text_width, 3)
     for line in lines:
         draw.text((x, y), line, font=fnt, fill=TEXT)
         y += int(size * 1.2)
@@ -182,6 +183,17 @@ def main() -> None:
     for path in made:
         print(f"{path.relative_to(ROOT)}  ({path.stat().st_size // 1024} KB)")
     print(f"\n{len(made)} cards written to {OUT.relative_to(ROOT)}/")
+
+    stale = []
+    for post in sorted((ROOT / "posts").glob("*.html")):
+        want = f"{SITE}/assets/social/{post.stem}.png"
+        if meta_of(read(post), "og:image") != want:
+            stale.append(post.name)
+    if stale:
+        print("\nThese posts do not point at their own card yet. Set og:image and")
+        print("twitter:image to the matching URL, or the preview will 404:")
+        for name in stale:
+            print(f"  {name}  ->  {SITE}/assets/social/{Path(name).stem}.png")
 
 
 if __name__ == "__main__":
