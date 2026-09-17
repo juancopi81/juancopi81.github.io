@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="390" viewBox="0 0 900 390" role="img" aria-labelledby="title desc">
+  <title id="title">Orthogonal projection and the corresponding right triangle</title>
+  <desc id="desc">Panel A shows a point x above subspace U, its perpendicular projection p, and another candidate u in U. Panel B isolates the right triangle with residual r from p to x, horizontal side from u to p, and hypotenuse from u to x.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/></marker>
+    <marker id="blue-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/></marker>
+  </defs>
+  <rect width="900" height="390" fill="#fff"/>
+  <g font-family="system-ui, sans-serif" fill="#374151">
+    <text x="40" y="42" font-size="23" font-weight="650">A</text>
+    <text x="505" y="42" font-size="23" font-weight="650">B</text>
+  </g>
+  <g stroke="#6b7280" stroke-width="2" fill="none">
+    <path d="M 50 300 H 398" marker-end="url(#arrow)"/>
+    <path d="M 88 319 V 77" marker-end="url(#arrow)"/>
+  </g>
+  <g fill="none" stroke-width="3">
+    <path d="M 88 300 L 245 110" stroke="#374151" marker-end="url(#arrow)"/>
+    <path d="M 245 300 V 110" stroke="#2563eb" stroke-dasharray="7 6"/>
+    <path d="M 348 300 L 245 110" stroke="#6b7280" stroke-dasharray="7 6"/>
+    <path d="M 245 279 H 266 V 300" stroke="#2563eb" stroke-width="2"/>
+    <path d="M 620 300 V 110" stroke="#2563eb" marker-end="url(#blue-arrow)"/>
+    <path d="M 723 300 H 620" stroke="#374151" marker-end="url(#arrow)"/>
+    <path d="M 723 300 L 620 110" stroke="#374151" marker-end="url(#arrow)"/>
+    <path d="M 620 279 H 641 V 300" stroke="#2563eb" stroke-width="2"/>
+  </g>
+  <g fill="#374151">
+    <circle cx="245" cy="110" r="4"/>
+    <circle cx="245" cy="300" r="4"/>
+    <circle cx="348" cy="300" r="4"/>
+    <circle cx="620" cy="110" r="4"/>
+    <circle cx="620" cy="300" r="4"/>
+    <circle cx="723" cy="300" r="4"/>
+  </g>
+  <g font-family="Georgia, 'Times New Roman', serif" font-size="26" font-style="italic" fill="#111827">
+    <text x="251" y="98">x</text>
+    <text x="235" y="334">p</text>
+    <text x="339" y="334">u</text>
+    <text x="406" y="309">U</text>
+    <text x="215" y="211" fill="#2563eb">r</text>
+    <text x="311" y="204">x − u</text>
+    <text x="626" y="98">x</text>
+    <text x="610" y="334">p</text>
+    <text x="714" y="334">u</text>
+    <text x="590" y="211" fill="#2563eb">r</text>
+    <text x="686" y="204">x − u</text>
+    <text x="642" y="283">p − u</text>
+  </g>
+  <path d="M 442 206 H 478" fill="none" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrow)"/>
+</svg>

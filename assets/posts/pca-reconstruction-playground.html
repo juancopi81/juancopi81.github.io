@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PCA Reconstruction Playground</title>
+    <style>
+      :root {
+        --bg: #fafafa;
+        --panel: #ffffff;
+        --text: #18181b;
+        --muted: #71717a;
+        --accent: #2563eb;
+        --line: #e4e4e7;
+        --subtle: #f4f4f5;
+        --orange: #c2410c;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+          BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+      .wrap { max-width: 1000px; margin: 0 auto; padding: 20px; }
+      h1 { margin: 0 0 6px; font-size: 22px; line-height: 1.25; }
+      p { margin: 0; }
+      .subtitle { margin-bottom: 16px; color: var(--muted); font-size: 15px; }
+      .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+      .controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 14px;
+        padding: 14px;
+      }
+      .label-row { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+      label { font-size: 14px; font-weight: 650; }
+      output { font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+      input[type="range"] { width: 100%; min-height: 24px; margin: 4px 0 0; accent-color: var(--accent); }
+      input:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+      button {
+        min-height: 42px;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--subtle);
+        color: var(--text);
+        cursor: pointer;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 650;
+      }
+      button:hover { border-color: #a1a1aa; }
+      .workspace { padding: 14px; }
+      canvas { display: block; width: 100%; aspect-ratio: 5 / 3; border: 1px solid var(--line); border-radius: 6px; }
+      .legend { display: flex; flex-wrap: wrap; gap: 5px 16px; margin-top: 9px; color: var(--muted); font-size: 12px; }
+      .legend span { display: inline-flex; align-items: center; gap: 5px; }
+      .swatch { display: inline-block; width: 14px; height: 0; border-top: 2px solid currentColor; }
+      .original { color: var(--accent); }
+      .original .swatch { width: 7px; height: 7px; border: 0; border-radius: 50%; background: currentColor; }
+      .reconstructed { color: var(--orange); }
+      .reconstructed .swatch { width: 7px; height: 7px; border: 1.5px solid currentColor; border-radius: 50%; }
+      .residual .swatch { color: #52525b; }
+      .reference .swatch { border-top-style: dashed; }
+      .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 14px 0; }
+      .metric { min-width: 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--subtle); }
+      .key { color: var(--muted); font-size: 12px; }
+      .value { margin-top: 3px; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+      #retained { color: var(--accent); }
+      #mse { color: var(--orange); }
+      .split-label { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 5px; font-size: 12px; }
+      .split-label span:first-child { color: var(--accent); }
+      .split-label span:last-child { color: var(--orange); text-align: right; }
+      .split-bar { display: flex; overflow: hidden; height: 12px; border-radius: 4px; background: var(--subtle); }
+      #retainedBar { background: var(--accent); }
+      #discardedBar { background: var(--orange); }
+      .small { color: var(--muted); font-size: 12px; line-height: 1.45; }
+      #varianceSum { margin-top: 6px; font-variant-numeric: tabular-nums; }
+      .explanation { margin-top: 12px; font-size: 14px; }
+      .note { margin-top: 6px; }
+      .live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+      noscript p { margin-top: 12px; }
+      @media (max-width: 650px) {
+        .controls { grid-template-columns: 1fr; gap: 8px; }
+        .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        canvas { aspect-ratio: 1 / 1; }
+      }
+      @media (max-width: 420px) {
+        .wrap { padding: 12px; }
+        .workspace, .controls { padding: 11px; }
+        h1 { font-size: 20px; }
+        .value { font-size: 19px; }
+        label { font-size: 13px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>How much do we lose?</h1>
+      <p class="subtitle">Rotate the line through the mean. The data stay fixed; their projections change.</p>
+
+      <div class="panel controls" aria-label="Projection controls">
+        <div>
+          <div class="label-row">
+            <label for="angle">Rotation from the first PCA direction</label>
+            <output id="angleValue" for="angle">0°</output>
+          </div>
+          <input id="angle" type="range" min="-90" max="90" step="1" value="0" aria-describedby="angleHelp" />
+          <p id="angleHelp" class="small">At 0°, we keep the first principal direction.</p>
+        </div>
+        <button id="reset" type="button">Return to PCA direction</button>
+      </div>
+
+      <section class="panel workspace" aria-label="Projection and reconstruction">
+        <canvas id="projectionCanvas" role="img" aria-label="The notebook's 400 data points, their reconstructions on the selected line, and selected perpendicular residuals." aria-describedby="plotDescription">The data form a tilted cloud. Rotating the projection line away from its first principal direction increases the reconstruction error.</canvas>
+        <div class="legend" aria-hidden="true">
+          <span class="original"><i class="swatch"></i>Original points</span>
+          <span class="reconstructed"><i class="swatch"></i>Reconstructed points</span>
+          <span class="residual"><i class="swatch"></i>Selected residuals</span>
+          <span class="reference"><i class="swatch"></i>First PCA direction</span>
+        </div>
+        <p id="plotDescription" class="live">Blue points are the original data. Orange circles are their reconstructions on the blue projection line. Gray segments show every twentieth residual. The dashed gray line marks the fixed first principal direction. The small cross marks the mean. Both axes use the same scale.</p>
+
+        <div class="metrics">
+          <div class="metric"><div class="key">Retained variance</div><div id="retained" class="value">8.194</div></div>
+          <div class="metric"><div class="key">Reconstruction MSE</div><div id="mse" class="value">0.314</div></div>
+          <div class="metric"><div class="key">Total variance</div><div id="total" class="value">8.509</div></div>
+          <div class="metric"><div class="key">Minimum MSE · λ₂</div><div id="minimum" class="value">0.314</div></div>
+        </div>
+
+        <div class="split-label"><span>Retained variance</span><span>Discarded variance</span></div>
+        <div class="split-bar" aria-hidden="true"><div id="retainedBar"></div><div id="discardedBar"></div></div>
+        <p id="varianceSum" class="small">Retained variance + MSE = total variance.</p>
+        <p id="explanation" class="explanation">Here, MSE = λ₂ ≈ 0.314. Rotating the line increases the error.</p>
+        <p class="small note">The same 400 points as in the notebook. MSE averages squared distances over the points, using 1/n as in the post.</p>
+      </section>
+      <p id="liveSummary" class="live" aria-live="polite" aria-atomic="true"></p>
+      <noscript><p>This experiment needs JavaScript. Keeping the first principal direction gives a reconstruction MSE of approximately 0.314.</p></noscript>
+    </main>
+    <script>
+      (() => {
+        "use strict";
+
+        // Exact fixed sample and eigendecomposition from w09_pca_svd_solved.ipynb.
+        // NumPy default_rng(seed=9); 400 points; empirical covariance uses 1/n.
+        // Embedded values preserve the notebook's float64 output; no resampling.
+        const DATA = {"X":[[0.386687030503865,-2.163044654503298],[-1.9052071956277592,-3.32716337928278],[5.541025486148801,0.606703608740514],[3.522082149509754,-0.19859034324741864],[1.7480641939509778,-2.0291726956069893],[-3.0821824655259764,-3.5734072379051214],[1.6436702786873378,0.10075650695284488],[4.521057750806477,0.44305108597391896],[0.4215575864854326,-1.3956716766466708],[0.7543569821103124,-1.0726112601358837],[1.4323141092269243,-1.5465641188297878],[-2.0568413977487943,-2.327731570751572],[2.3730282337004502,-1.32910546020103],[4.822708685892652,-0.12670805898193993],[4.79426823585775,-0.32598785913979345],[4.19149017343317,-0.6202057429826472],[-2.000709452055413,-4.197442250072517],[-1.3856655349710358,-3.069205747504146],[2.4066534167098075,-0.7279288507304869],[2.835421755861009,-1.0198998336057026],[2.2648112668128983,-0.46437241505676385],[2.256191647569764,-1.6465726514035859],[0.09705363421771773,-2.645327609894839],[0.04443425292659464,-1.3147272468980054],[-0.18319970703633137,-3.378118640386229],[1.5323156770248734,-1.183111081640204],[2.0971075236093615,-1.8730046759699288],[0.5493692814791971,-2.4463948540416283],[5.261413521742729,0.09125431497557646],[2.44632705663089,-1.4311335601542745],[3.210132737204096,-0.298698144163145],[-1.923460449194673,-2.2160897829658355],[3.1308261119716816,-0.9361425176001835],[0.3011949221786572,-2.542270785042156],[2.4074841057610024,-0.6718214854855454],[2.373251206005879,-0.7653372769735374],[-1.3766616129155058,-3.9103643137267037],[-0.10879759938390876,-2.523415206557357],[4.092514773327365,-0.9557138265307639],[1.861325667908294,-0.9285918256180894],[5.153177495467347,-0.06549572630381895],[3.8335346967108253,0.052740177072094774],[0.8188087051721689,-0.7774093773602506],[-0.2653385593910751,-2.907865507239246],[3.5862126916261348,-0.16358698900826074],[1.6630318070915422,-0.6300168013957813],[5.911162287419022,1.7234431928184906],[5.06434088777028,0.5667522567767886],[-1.1010490132290105,-1.8313038037226685],[-0.585808281470312,-1.4824355498546957],[2.1090611110177204,-1.0939442862344877],[1.7904016273024377,-0.8220219795379641],[0.6701637391665118,-0.948002368872844],[3.810293761438376,-0.06798432870001447],[0.9678859114983656,-1.775418647945462],[1.9379790250285127,-0.1189597545194998],[5.33627913643122,-0.23942116390447699],[7.08192041559147,0.3239812723811968],[6.9697864893534165,0.5698867984531273],[2.265188563265483,-0.6198763735537451],[2.8003722826862116,-1.5244554105733827],[6.1562834286094175,0.13056009496164545],[-1.6182838431229145,-2.6758613110741796],[0.2275647464784516,-2.2600095690643434],[4.591439949540314,0.23781767271911658],[3.168291009979885,-0.5041666142649188],[2.6988423783891573,-0.10589044614788712],[4.7825056562724795,0.6360603590713358],[4.992072942824741,0.20585985167861054],[0.8473921040667947,-2.6823140819910187],[4.021412489115787,1.0044015598670897],[3.2929303935747,-1.7877469147009304],[1.0693882877627376,-1.5904252324763983],[3.228350673613526,-0.48409759535546004],[4.74561096448436,1.0041780029490388],[-1.0378207460714792,-2.9287558237009375],[0.5504016002943777,-2.067241677250494],[5.130947006587514,1.8317328636224075],[4.428260937309624,-0.12300753769055262],[1.450979277757057,-1.3097777514694253],[0.006251750027463032,-2.6021474884530083],[3.771333898761025,0.39010842324082806],[1.6364508718632802,-1.2997775506111346],[5.877488528251183,1.3084593874084356],[-1.9291706659367467,-3.628652753393866],[3.262499585684499,-0.7968538415146255],[3.039628822807249,-1.6202568537084334],[5.547376628955471,1.1776134737492256],[1.048523621030377,-1.7541767376292645],[3.0887570521751107,-1.1922604236325869],[-3.4557959405797787,-6.5682975819959495],[7.96998216346178,1.6921606414753572],[1.5843910415474758,-1.2014675301480813],[1.2322663578230544,-1.0192951724916723],[-0.07760832641075144,-2.2456105920940184],[-3.0182034438503367,-3.9845807397039077],[4.142667814852847,0.26444453690639946],[3.188049215154364,-0.3960594740522462],[4.4179048597925785,0.8226368292795292],[-0.2108589701823549,-2.008094347837239],[0.041272131946039625,-2.4296234571246362],[1.7170139334800942,-1.177592087334927],[1.5374643621021682,-1.338876189178864],[1.5611624733325837,-2.208443869550231],[5.049722713893269,0.9645689318932285],[3.5287747883064204,0.26319434603226943],[-0.4626316031032389,-2.2582073606840227],[-0.29904576507899083,-2.5021058565197336],[1.965937810633073,-1.1574258292776631],[4.268005615044514,0.11861703737301554],[-0.11316173160648102,-2.029940733858285],[5.295095345484182,1.190937036283477],[5.651434812638133,-0.17421480280802482],[2.716730806989467,-0.9385735408834128],[-2.503446291815041,-4.055983912660035],[2.947460441822997,-1.6973553380995983],[0.33819535208109563,-2.2956684453515317],[3.824970805129276,0.2868244923075087],[0.0016409017589094077,-3.2595975222581606],[1.228523371333945,-1.826885516543631],[1.092904297827735,-2.0037237013047857],[4.106168453425967,0.4475500589675332],[3.1839991826091687,-1.3127540302583418],[1.0864677204710094,-1.5176316124956624],[4.404307404644811,0.8788738665422005],[-0.0643604949599057,-2.90350395360956],[0.2787850984111291,-4.295631377593265],[0.23800138346074773,-3.561992428190446],[5.907774634463992,1.4369393556818997],[0.8487707316781352,-1.9880099254726142],[3.0469977619336746,0.47784275520531816],[4.0350895877917,0.9502170703769024],[3.362447585924829,0.386016241968578],[5.9104543191768695,1.738260870332852],[2.2748018714982785,-0.42691992627577846],[1.0962452175393282,-0.9468444419094877],[2.015952867757804,-1.739479590629683],[7.4297805306626925,1.8185329844310245],[3.241302370921197,-1.221919877706926],[0.8352485622353025,-2.2555923066284977],[-0.3551465249190535,-1.9875926872846008],[1.0398285731815962,-2.722036641901184],[5.1463211870224885,1.1173986713063244],[-3.2338497582780397,-4.947101388041876],[5.27359959694464,0.23980658685357858],[1.880028374608735,-1.5376777264735288],[-2.9668553066183048,-4.98599491961658],[4.055318703511671,0.9186107615386447],[2.3642696717815057,-1.1450566636028587],[3.8961768744562564,-0.008180218001464401],[4.091124745715978,-0.5608921321413806],[2.4539635979659096,-0.6886225569220326],[4.515983543012143,-0.7373724848988512],[4.6008411837883525,0.40084035940804763],[3.457892910631673,-1.5361263920850883],[3.106326343893195,-1.6330078213084178],[-3.9022886507097967,-4.925012897442588],[2.522467200318556,-0.9333984938468591],[3.0032746122554563,-0.6686911137466995],[5.12425409788091,1.1842878216505706],[5.969708035012211,2.8284735741908613],[4.3145653953827185,0.6778933654933026],[7.678419931648416,1.697245221659621],[1.695922593302733,-1.3077963496347622],[-1.6414553261572644,-2.9319492203367075],[6.9865796067289665,1.0159768102974356],[0.26500918705459453,-1.784635804222027],[6.516146610495031,0.4591292672657663],[4.017101677178001,-0.16693019435515566],[-2.0213761738439215,-4.086356545662115],[1.0609172085376979,-1.8213793034408277],[2.7017103243850253,-1.0459236964248868],[2.223855959125613,-1.2697153372425478],[3.5380948165583144,0.2783175170427057],[5.213130518124165,0.1191505398714634],[0.6839675824526232,-2.56923039686055],[5.98054430536498,1.4851726896063449],[0.8863425630087458,-2.7592748799214832],[-0.07048820699726077,-2.5877989230533074],[-0.3069262439928262,-2.759122017612542],[6.002906495895031,1.0224464777715743],[5.117280076808177,-0.35150398062492394],[3.3208062481915728,-0.2983639223131819],[-0.2510880529679178,-1.8249024537267395],[2.6831932740995272,-1.332451823702339],[1.4742258390686442,-1.0234430540183224],[-1.038553697564513,-3.1147541562299645],[-0.013243114922272703,-2.4235552057441394],[1.175171447304072,-1.8758207441454005],[4.421825752664029,0.22816557205648347],[3.699571721886847,0.20270608053593353],[3.4692551475590285,-0.24774238491365197],[2.42225526501842,-0.6351642201508283],[5.027506465966012,1.7737823475941314],[7.267700563040197,1.3351516210928085],[3.104790095363474,-0.30482864797967213],[5.28295830095521,1.4287960758601135],[-1.223164489406157,-3.1477498140680678],[-1.7138101433513473,-3.9409224584674676],[0.319957075116756,-2.759393828574967],[6.681954868882029,1.2609155144329023],[1.1907616273959312,-1.738576482184767],[5.720299064482041,-0.09203977728206902],[6.856995109065595,1.2263305223773742],[-0.06940421998007285,-2.523638276321601],[3.419396044272303,1.3290319593106954],[4.950192169468826,0.14421012928104004],[2.2463837767828236,-1.782415028739773],[3.9155749347888014,0.41796514399414986],[1.3064074306304991,-1.0155728260270769],[-1.6740482429114776,-3.924075751600452],[0.29959551135283125,-2.763827423827299],[-1.9646834521058434,-3.177130562613832],[0.08769442809499006,-2.600982057114641],[5.0160326021168755,1.6082242037631373],[6.132182607126417,-0.18682184560758353],[1.801136517012409,-1.672889265882905],[0.9576284755845432,-2.481736461902855],[0.8903403134396031,-1.632892630939184],[1.6858240579066401,-2.39145546437979],[-1.5939740288052446,-3.473229415048825],[-2.1230850874856984,-3.441341647677557],[1.356728953948908,-2.0500023862024754],[3.1650797110311606,-0.8248531712155309],[4.6629210323661985,-0.4891493413150809],[-2.72035543322671,-2.9901859017550416],[3.6729057904235693,-1.9485964177727961],[7.234264786820884,1.0350122583634631],[7.201580878546264,3.117134670656842],[4.740608535478298,0.4011748623733842],[-0.008229322488095825,-1.9464154569990608],[1.1615721552323575,-1.1287078006900924],[2.248957244668199,-2.182672244550959],[0.6922996110888311,-2.0885117454363074],[1.2071074167509688,-1.7149771647422147],[-0.3266728101182874,-1.711734557340251],[1.0179076642696,-1.583131247805341],[-2.0060966808640153,-3.270872981601463],[6.296133664985073,1.7710771676057049],[2.172272512910796,-1.801979404422792],[3.9084148959461453,0.26666077450030023],[-0.8040862622626244,-3.044503228187541],[4.148256505134019,-0.46813599999225475],[4.16645028107085,-0.12439361550343098],[6.620557704482312,0.7573662452877057],[3.839483226134294,-0.07505055826821194],[-1.9854649338955648,-4.398677474856757],[0.07494347704595761,-1.8989389899674916],[1.6198501126395408,-1.5458630997401777],[2.1573254734751783,0.4759946355648501],[1.354603088243536,-0.4468728907148498],[2.513614052412066,-2.010970414272631],[0.8050966434495852,-2.861818728113171],[2.0043539495843956,-2.25593830233188],[-0.3738621729121543,-1.545295707747921],[3.034100955568708,-0.442766713410918],[7.645729812257909,1.145972018966162],[4.101923979746009,-0.30059746446161195],[2.6355366079824156,-1.3545352266745594],[2.459687361358973,-0.2165862563306037],[5.518548438433515,1.0526059709666167],[4.964783184346102,-0.2309178277754087],[-5.249820184227529,-5.159584980105041],[7.568734527071395,2.476682301727662],[0.9319338157773678,-1.9432285806558092],[5.9757880244432755,0.41734995951971143],[2.52454671236368,-0.5804941351346891],[-0.7165385493983845,-1.6443701132683635],[4.109030611628401,1.0909107874070183],[-0.29867882475728535,-2.6030425355379068],[6.293431682348429,1.6677274142056877],[6.274799265137689,0.15970334897356375],[2.8729003939543443,-2.0612289862600592],[1.150715273964027,-1.6512375142166746],[2.5919056400568072,-1.7587753897225744],[3.0774107187023994,-0.21145206391654592],[2.0236278101336933,-0.7677114558677794],[5.056864419001808,1.4065699046927476],[1.4943983736194124,-1.291412358023548],[0.9070282628257866,-2.050242176296909],[5.2677803394076514,0.6612969814110525],[1.523172346257395,-1.9958443440550662],[3.349294465375152,0.5790339171377255],[4.923899488426958,0.3695923043398548],[4.26500508608894,0.7205068037800051],[6.43029953418805,1.0179799601902237],[4.239687698666558,-0.17253531097375052],[0.7524252413910468,-1.2771543862031134],[3.8706991303041325,-0.0936551369587234],[5.914599588872287,1.2424820429027261],[-0.012108340532576367,-1.9794368600312429],[0.39827927403077057,-2.8765092012722784],[1.4872796314377863,-1.7343562086546513],[4.891809926428875,0.26485060104892133],[-1.960652811245299,-4.155172829682218],[3.334657753248016,-0.5564699447102014],[2.5477810648060246,-1.760527764031193],[1.3418316692427934,-1.3480522099235646],[4.260568260141158,-0.44021567024501673],[0.939093773675352,-2.603960230121418],[5.09545728611935,0.13650664309289895],[2.0480745275736347,-1.816118964629076],[0.22429012723961472,-2.506238756256673],[4.951421635423596,0.15932577273649962],[5.4955486732449454,0.8359310375335707],[3.6171237401291982,1.3058231056581433],[8.187832923536039,2.741922240489161],[2.7471986915670876,-0.9423686392600081],[4.857745283866601,-0.7389800402959142],[0.7518574994356702,-2.1797698709957745],[0.8489746618758482,-2.6757069087504797],[6.226077908773018,0.3824817523273669],[1.5739438292705823,-1.9547951060185218],[1.6142608181668323,-2.232004168478279],[4.473535044073316,0.15833355672982896],[7.329776054975053,1.1330104668605183],[3.1848920143721493,-1.402326434503025],[2.744336715143388,-0.09054201761400249],[-0.692999080537597,-2.3533585600321287],[0.7580748472965102,-2.8313403256237297],[3.1128746977143256,-0.13308906021340872],[2.747741570920189,-0.6430623250860397],[2.562989589003629,-1.290397607344864],[-2.862875197337284,-4.590206405407889],[0.5491183209873627,-1.8620828097791449],[-0.19267669993664382,-1.3765168225600959],[4.200243371415092,-0.21092498240965596],[4.243574740454694,-0.07085627428868713],[5.901875934131278,0.8526921152964946],[6.471108342306809,0.791520909075488],[2.7979016020659535,-0.8534678771681321],[0.31840742638853614,-2.5692646582060616],[2.8884491553517977,-1.5253751932498463],[0.19887405179540396,-2.117780326633728],[0.09689772394400009,-1.4704870866312465],[6.674345668996602,1.3067434458675398],[3.2649622761166603,-0.17293592986395878],[4.500988458807186,-0.0929858627422896],[4.560565456015478,-0.05415757320160264],[1.898326097540869,-0.5647387505025829],[2.579847794627768,-1.5726559666047355],[0.9566539658393491,-1.7536431034969846],[0.8518159381471577,-2.658426509385915],[3.1646061670238486,-1.1955192080453299],[8.04529467234405,2.032694269432427],[4.688284327122602,-0.5798843766804653],[1.4146372278146149,-1.1437246736935787],[3.6850746428685195,0.15907835769510803],[0.9872499242921018,-1.8185231940679714],[2.4103469579462304,-1.969134724717959],[5.611575525214882,0.5052809473576512],[1.6597128197080118,-0.9670370499895031],[3.4238345421649408,1.2629931156078893],[1.901853273055552,-0.4361601510147648],[2.2293120111704074,-1.1456630277757072],[5.064446865345872,1.038372734617281],[1.2643699473388588,-1.8217128105513976],[2.485645742598557,0.09283597470569305],[0.5144778568206172,-2.0864217747086187],[4.029745281979329,0.05245063618028145],[0.9906810098408021,-1.3945627951398456],[-0.40293328138618056,-1.5491948388310695],[-3.58792972712034,-6.058831950952055],[2.7487424841158847,-0.42050208253042565],[3.876873080993577,-0.5137324654991642],[2.1448354405175256,-1.1992840399178786],[0.38916610593211853,-2.5554941656213797],[-0.22455216974523307,-1.9399752517511706],[3.7229761045339504,-0.5079632861395509],[1.7115662592260636,-1.7789097735390418],[1.6518323891659916,-1.3452825933811607],[1.7722737151804084,-1.775306109408819],[3.55313577213162,-0.43944033348230394],[2.512734522273068,-0.9333588542458692],[2.391244809979806,-1.785410106649521],[1.5556711155759766,-0.8002682952511373],[0.5996220674272921,-2.71201950188059],[1.5702153154811835,-1.8212078363448598],[6.141876428934287,1.0884252515092157],[5.242043953963153,1.2384749288815264],[4.191242162962092,0.47773918162449536],[3.2781179183784173,-0.16426678403689587],[6.22072758939605,0.012141323557360417],[3.105823468311301,0.14404700367815537],[0.876492332618356,-2.0356690407665834],[5.222745861631257,-0.43221998828854125],[3.591837480279473,-1.0225921932863116],[2.995448402708936,-0.444742298722133],[3.4258315308445466,-1.075887035674718],[2.7116304754423424,-1.276643092929858],[3.3950224870559698,-0.6821405742746648],[0.08644813782708294,-1.8973249603934645],[-0.44992979831536406,-3.170229564448827],[5.1650180739604075,0.9025709349121951],[5.013571210137515,-0.07534504197944059],[3.201036869440575,-1.1327912259874817],[-2.1753492307344997,-3.5430413508750367],[-0.15745894910371172,-2.5888903563145322],[-0.09012877529197372,-2.262451388092087],[4.2493242059256024,-0.5686139949067772]],"mean":[2.453318434325009,-1.008723706899579],"covariance":[[6.145919214156058,3.456303251255307],[3.456303251255307,2.3628143864165523]],"eigenvalues":[8.194417903895813,0.31431569667679804],"principal_directions":[[-0.8602567111754434,0.5098611486253973],[-0.5098611486253973,-0.8602567111754434]],"source":"notebooks/w09_pca_svd_solved.ipynb; seed 9; 400 samples; covariance normalized by 1/n"};
+        const mean = DATA.mean;
+        const points = DATA.X;
+        const centered = points.map(([x, y]) => [x - mean[0], y - mean[1]]);
+        // The notebook stores principal directions as the columns of V.
+        const principal = [DATA.principal_directions[0][0], DATA.principal_directions[1][0]];
+        const totalVariance = centered.reduce((sum, [x, y]) => sum + x * x + y * y, 0) / points.length;
+        const radius = Math.max(...centered.map(([x, y]) => Math.hypot(x, y))) * 1.08;
+        const byId = (id) => document.getElementById(id);
+        const elements = Object.fromEntries([
+          "angle", "angleValue", "reset", "projectionCanvas", "retained", "mse", "total", "minimum",
+          "retainedBar", "discardedBar", "varianceSum", "explanation", "liveSummary",
+        ].map((id) => [id, byId(id)]));
+
+        function compute(angleDegrees) {
+          const radians = angleDegrees * Math.PI / 180;
+          const cosine = Math.cos(radians);
+          const sine = Math.sin(radians);
+          const direction = [cosine * principal[0] - sine * principal[1], sine * principal[0] + cosine * principal[1]];
+          let retained = 0;
+          let mse = 0;
+          let maxOrthogonalityError = 0;
+          const reconstructions = centered.map(([x, y]) => {
+            const coordinate = x * direction[0] + y * direction[1];
+            const projection = [coordinate * direction[0], coordinate * direction[1]];
+            const residual = [x - projection[0], y - projection[1]];
+            retained += projection[0] ** 2 + projection[1] ** 2;
+            mse += residual[0] ** 2 + residual[1] ** 2;
+            maxOrthogonalityError = Math.max(maxOrthogonalityError,
+              Math.abs(residual[0] * direction[0] + residual[1] * direction[1]));
+            return [mean[0] + projection[0], mean[1] + projection[1]];
+          });
+          retained /= points.length;
+          mse /= points.length;
+          return { angleDegrees, direction, reconstructions, retained, mse, total: totalVariance,
+            minimum: DATA.eigenvalues[1], splitError: Math.abs(retained + mse - totalVariance), maxOrthogonalityError };
+        }
+
+        function draw(state) {
+          const canvas = elements.projectionCanvas;
+          const bounds = canvas.getBoundingClientRect();
+          const width = Math.max(1, bounds.width - 2);
+          const height = Math.max(1, bounds.height - 2);
+          const ratio = window.devicePixelRatio || 1;
+          canvas.width = Math.round(width * ratio);
+          canvas.height = Math.round(height * ratio);
+          const ctx = canvas.getContext("2d");
+          ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+          ctx.clearRect(0, 0, width, height);
+          const margin = { left: width < 350 ? 32 : 40, right: 17, top: 17, bottom: 34 };
+          const plotWidth = width - margin.left - margin.right;
+          const plotHeight = height - margin.top - margin.bottom;
+          const scale = Math.min(plotWidth, plotHeight) / (2 * radius);
+          const origin = [margin.left + plotWidth / 2, margin.top + plotHeight / 2];
+          const screen = ([x, y]) => [origin[0] + (x - mean[0]) * scale, origin[1] - (y - mean[1]) * scale];
+          const xMin = mean[0] - plotWidth / (2 * scale);
+          const xMax = mean[0] + plotWidth / (2 * scale);
+          const yMin = mean[1] - plotHeight / (2 * scale);
+          const yMax = mean[1] + plotHeight / (2 * scale);
+          const tick = width < 400 ? 5 : 4;
+          ctx.font = "11px ui-sans-serif, system-ui, sans-serif";
+          ctx.lineWidth = 1;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "top";
+          for (let x = Math.ceil(xMin / tick) * tick; x <= xMax; x += tick) {
+            const px = screen([x, mean[1]])[0];
+            ctx.strokeStyle = "#f0f0f2";
+            ctx.beginPath(); ctx.moveTo(px, margin.top); ctx.lineTo(px, margin.top + plotHeight); ctx.stroke();
+            ctx.fillStyle = "#71717a"; ctx.fillText(String(x), px, margin.top + plotHeight + 5);
+          }
+          ctx.textAlign = "right";
+          ctx.textBaseline = "middle";
+          for (let y = Math.ceil(yMin / tick) * tick; y <= yMax; y += tick) {
+            const py = screen([mean[0], y])[1];
+            ctx.strokeStyle = "#f0f0f2";
+            ctx.beginPath(); ctx.moveTo(margin.left, py); ctx.lineTo(margin.left + plotWidth, py); ctx.stroke();
+            ctx.fillStyle = "#71717a"; ctx.fillText(String(y), margin.left - 6, py);
+          }
+          ctx.fillStyle = "#52525b";
+          ctx.textAlign = "right"; ctx.fillText("x₁", width - 6, height - 10);
+          ctx.textAlign = "left"; ctx.fillText("x₂", 6, 11);
+          ctx.save();
+          ctx.beginPath(); ctx.rect(margin.left, margin.top, plotWidth, plotHeight); ctx.clip();
+
+          function drawLine(direction, color, dash, lineWidth) {
+            const reach = Math.hypot(plotWidth, plotHeight) / scale;
+            const a = screen([mean[0] - reach * direction[0], mean[1] - reach * direction[1]]);
+            const b = screen([mean[0] + reach * direction[0], mean[1] + reach * direction[1]]);
+            ctx.strokeStyle = color; ctx.lineWidth = lineWidth; ctx.setLineDash(dash);
+            ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); ctx.setLineDash([]);
+          }
+          drawLine(principal, "#a1a1aa", [5, 5], 1.5);
+          drawLine(state.direction, "#2563eb", [], 1.2);
+
+          ctx.strokeStyle = "#52525b";
+          ctx.lineWidth = 1;
+          for (let i = 0; i < points.length; i += 20) {
+            ctx.beginPath(); ctx.moveTo(...screen(points[i])); ctx.lineTo(...screen(state.reconstructions[i])); ctx.stroke();
+          }
+          ctx.fillStyle = "rgba(37, 99, 235, 0.44)";
+          for (const point of points) {
+            ctx.beginPath(); ctx.arc(...screen(point), width < 400 ? 2 : 2.4, 0, 2 * Math.PI); ctx.fill();
+          }
+          ctx.strokeStyle = "rgba(194, 65, 12, 0.58)";
+          ctx.lineWidth = 1;
+          for (const point of state.reconstructions) {
+            ctx.beginPath(); ctx.arc(...screen(point), width < 400 ? 2 : 2.5, 0, 2 * Math.PI); ctx.stroke();
+          }
+          const [mx, my] = screen(mean);
+          ctx.strokeStyle = "#18181b"; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.moveTo(mx - 4, my); ctx.lineTo(mx + 4, my); ctx.moveTo(mx, my - 4); ctx.lineTo(mx, my + 4); ctx.stroke();
+          ctx.restore();
+        }
+
+        function update() {
+          const state = compute(Number(elements.angle.value));
+          elements.angleValue.textContent = `${state.angleDegrees > 0 ? "+" : ""}${state.angleDegrees}°`;
+          elements.angle.setAttribute("aria-valuetext", `${state.angleDegrees} degrees from the first principal direction`);
+          for (const key of ["retained", "mse", "total", "minimum"]) elements[key].textContent = state[key].toFixed(3);
+          elements.retainedBar.style.width = `${100 * state.retained / state.total}%`;
+          elements.discardedBar.style.width = `${100 * state.mse / state.total}%`;
+          elements.varianceSum.textContent = `Retained variance + MSE = ${state.total.toFixed(3)} (constant).`;
+          elements.explanation.textContent = state.angleDegrees === 0
+            ? "Here, MSE = λ₂ ≈ 0.314. Rotating the line increases the error."
+            : "The residuals are still perpendicular to the chosen line. But the MSE is now above λ₂.";
+          elements.liveSummary.textContent = `Rotation ${state.angleDegrees} degrees. Retained variance ${state.retained.toFixed(3)}. ` +
+            `Reconstruction MSE ${state.mse.toFixed(3)}. Total variance stays ${state.total.toFixed(3)}. Minimum MSE ${state.minimum.toFixed(3)}.`;
+          draw(state);
+          window.__pcaReconstructionPlayground = { compute, state, data: DATA };
+        }
+
+        elements.angle.addEventListener("input", update);
+        elements.reset.addEventListener("click", () => { elements.angle.value = "0"; update(); });
+        let resizeFrame = 0;
+        function redrawOnResize() {
+          cancelAnimationFrame(resizeFrame);
+          resizeFrame = requestAnimationFrame(update);
+        }
+        function reportHeight() {
+          if (window.parent === window) return;
+          const height = Math.ceil(document.querySelector(".wrap").getBoundingClientRect().height);
+          window.parent.postMessage({ type: "pca-reconstruction:resize", height }, "*");
+        }
+        if ("ResizeObserver" in window) {
+          new ResizeObserver(redrawOnResize).observe(elements.projectionCanvas);
+          new ResizeObserver(reportHeight).observe(document.querySelector(".wrap"));
+        } else {
+          window.addEventListener("resize", () => { redrawOnResize(); reportHeight(); });
+        }
+        window.addEventListener("load", reportHeight);
+        update();
+        setTimeout(reportHeight, 100);
+      })();
+    </script>
+  </body>
+</html>

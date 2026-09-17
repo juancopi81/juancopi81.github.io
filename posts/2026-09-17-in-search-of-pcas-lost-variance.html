@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>In Search of PCA’s Lost Variance | Juan Carlos</title>
+
+    <meta name="description" content="A geometric derivation of why PCA reconstruction mean-squared error equals the sum of the discarded eigenvalues, through orthogonal projections and a 2D example." />
+    <meta name="author" content="Juan Carlos" />
+    <link rel="canonical" href="https://juancopi81.github.io/posts/2026-09-17-in-search-of-pcas-lost-variance.html" />
+
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Juan Carlos" />
+    <meta property="og:title" content="In Search of PCA’s Lost Variance" />
+    <meta property="og:description" content="A geometric derivation of why PCA reconstruction mean-squared error equals the sum of the discarded eigenvalues, through orthogonal projections and a 2D example." />
+    <meta property="og:url" content="https://juancopi81.github.io/posts/2026-09-17-in-search-of-pcas-lost-variance.html" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content="https://juancopi81.github.io/assets/social/2026-09-17-in-search-of-pcas-lost-variance.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Social card for In Search of PCA’s Lost Variance" />
+    <meta property="article:published_time" content="2026-09-17" />
+    <meta property="article:author" content="Juan Carlos" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@juancopi81" />
+    <meta name="twitter:creator" content="@juancopi81" />
+    <meta name="twitter:title" content="In Search of PCA’s Lost Variance" />
+    <meta name="twitter:description" content="A geometric derivation of why PCA reconstruction mean-squared error equals the sum of the discarded eigenvalues, through orthogonal projections and a 2D example." />
+    <meta name="twitter:image" content="https://juancopi81.github.io/assets/social/2026-09-17-in-search-of-pcas-lost-variance.png" />
+    <meta name="twitter:image:alt" content="Social card for In Search of PCA’s Lost Variance" />
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["\\[", "\\]"]],
+        },
+        svg: {
+          fontCache: "global",
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  </head>
+  <body>
+    <main class="page post-page">
+      <nav class="nav post-nav-top">
+        <a href="../index.html">Home</a>
+        <a href="../projects.html">Projects</a>
+        <a href="../writing.html">Writing</a>
+        <a href="../about.html">About</a>
+      </nav>
+
+      <article class="post-content math-note">
+        <header class="post-header">
+          <p class="eyebrow">Research Log</p>
+          <h1>In Search of PCA’s Lost Variance</h1>
+          <p class="post-meta">September 17, 2026 · PCA · Linear algebra</p>
+        </header>
+
+        <section class="post-section">
+          <h2>The Question</h2>
+          <p>
+            In <a href="https://mml-book.github.io/book/mml-book.pdf#page=324">PCA</a>, we <em>compress</em> our data by finding
+            their principal components and then selecting the first \(k\)
+            components with the largest eigenvalues. By doing this, we discard
+            some principal components associated with lower eigenvalues. What do
+            these discarded eigenvectors and their corresponding eigenvalues
+            have to do with the reconstruction mean-squared error?
+          </p>
+          <p>
+            Short answer: in the setting of this post, the reconstruction MSE
+            equals, in fact, the sum of the discarded eigenvalues.
+          </p>
+          <p>
+            By MSE, I mean the average squared distance between each sample
+            \(x_i\) and its reconstruction \(\widehat{x}_i\):
+          </p>
+          <div class="math-block">
+            \[
+            \operatorname{MSE}=\frac{1}{n}\sum_{i=1}^{n}\lVert x_i-\widehat{x}_i\rVert^2.
+            \]
+          </div>
+          <p>
+            Here, \(n\) is the number of samples: we add the squared errors
+            across coordinates, then average over samples. I’ll also use
+            \(1/n\) to normalize the covariance matrix.
+          </p>
+          <p>
+            Note: I encourage the reader to check this <a href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/notebooks/w09_pca_svd_solved.ipynb">notebook</a>
+            as a companion to this blog post.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Why I Care</h2>
+          <p>
+            Compressing data is a common theme in AI/ML. For example, some
+            approaches to diffusion models work in the latent space to reduce
+            computation. But compression comes with its own challenges, one of
+            them being aware of what we are <em>losing</em> with these
+            <em>smaller</em> representations (as a side note, I highly recommend
+            the 3Blue1Brown series <a href="https://www.youtube.com/watch?v=l6DKRf-fAAM">“Compression is intelligence”</a>).
+          </p>
+          <p>
+            Today, I’d like to explore what’s gone after we reduce our data
+            dimensions using PCA. In doing that, I hope we can get a nice
+            geometric intuition for some topics related to probability—mean,
+            variance—linear algebra—projections, eigendecomposition—and machine
+            learning, namely PCA.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Setup and Definitions</h2>
+          <p>
+            Covering PCA in detail is out of the scope of this post. Instead,
+            I’ll use a motivating example that sheds light on the question at
+            hand.
+          </p>
+          <p>Let’s start with these data in 2D.</p>
+          <figure class="post-figure">
+            <img src="../assets/posts/pca-synthetic-2d-before-centering.png" alt="Synthetic two-dimensional data forming an elongated cloud away from the origin before centering." loading="lazy" />
+            <figcaption>Synthetic 2D data before centering, from the notebook.</figcaption>
+          </figure>
+          <p>
+            In PCA, we start by centering the data, such that the empirical mean
+            becomes zero. Writing the centered points as
+            \(\tilde{x}_i=x_i-\bar{x}\),
+          </p>
+          <div class="math-block">
+            \[
+            \frac{1}{n}\sum_{i=1}^{n}\tilde{x}_i=0.
+            \]
+          </div>
+          <p>This will pay off later in our “Derivation” section.</p>
+          <p>
+            PCA describes the variation around the empirical mean, which we
+            ensured equals zero in our previous step. To achieve this, PCA
+            applies <a href="https://www.3blue1brown.com/lessons/eigenvalues/">eigendecomposition</a> to the
+            covariance matrix \(S\):
+          </p>
+          <div class="math-block">
+            \[
+            S=\frac{1}{n}X_c^{\mathsf T}X_c,
+            \]
+          </div>
+          <p>where \(X_c\) has the centered data points as its rows.</p>
+          <p>We can visualize the previous steps in the following image.</p>
+          <figure class="post-figure">
+            <img src="../assets/posts/pca-directions-from-covariance.png" alt="Centered data with a long red arrow along the first principal direction and a shorter green arrow along the perpendicular second principal direction." loading="lazy" />
+            <figcaption>
+              PCA directions from the covariance matrix, from the notebook.
+              The arrows follow the principal directions, with lengths
+              \(2\sqrt{\lambda_j}\), twice the standard deviation along each
+              direction. Reversing an arrow gives the same principal axis.
+            </figcaption>
+          </figure>
+          <p>
+            For our example, we have the following two principal directions,
+            each with length one.
+          </p>
+          <p>First principal direction:</p>
+          <div class="math-block">
+            \[
+            \text{eigenvector }v_1\approx
+            \begin{bmatrix}-0.86\\-0.51\end{bmatrix},
+            \qquad \text{eigenvalue }\lambda_1\approx 8.19.
+            \]
+          </div>
+          <p>Second principal direction:</p>
+          <div class="math-block">
+            \[
+            \text{eigenvector }v_2\approx
+            \begin{bmatrix}0.51\\-0.86\end{bmatrix},
+            \qquad \text{eigenvalue }\lambda_2\approx 0.314.
+            \]
+          </div>
+          <p>
+            Now, we select the first principal direction and project the data
+            there. We keep one coordinate, \(z_i\), and use it to recover the
+            projected point \(p_i\):
+          </p>
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            z_i&=v_1^{\mathsf T}\tilde{x}_i,\\
+            p_i&=z_iv_1.
+            \end{aligned}
+            \]
+          </div>
+          <p>
+            Here, \(z_i\) is the one-dimensional representation. The point
+            \(p_i\) lies on our principal direction in 2D.
+          </p>
+          <p>
+            This projection creates a residual \(r_i\) (the difference between
+            the centered sample and its projection) that is perpendicular,
+            also known as orthogonal, to the principal direction. This
+            orthogonality is important because it guarantees we are projecting
+            to the closest point (we’ll see why).
+          </p>
+          <p>Finally, we add back the original mean:</p>
+          <div class="math-block">
+            \[
+            \widehat{x}_i=\bar{x}+p_i.
+            \]
+          </div>
+          <p>Our reconstruction looks like this.</p>
+          <figure class="post-figure">
+            <img src="../assets/posts/pca-one-component-reconstruction.png" alt="Original two-dimensional data and their reconstruction on the first principal direction, with dark gray segments showing selected residuals." loading="lazy" />
+            <figcaption>Projection to one component and reconstruction, from the notebook.</figcaption>
+          </figure>
+          <p>
+            So, when we subtract the reconstruction, the mean cancels:
+          </p>
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            x_i-\widehat{x}_i
+            &=x_i-(\bar{x}+p_i)\\
+            &=(x_i-\bar{x})-p_i\\
+            &=\tilde{x}_i-p_i\\
+            &=r_i.
+            \end{aligned}
+            \]
+          </div>
+          <p>
+            With this setup, if we now take all the residuals, square their
+            lengths, and compute their average, we’ll get—you guessed it—about
+            \(0.314\)! Exactly the eigenvalue (variance of the discarded second
+            principal component). As you might imagine, there’s an explanation
+            for this match.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Minimal Derivation</h2>
+          <p>
+            In the previous section, I claimed that orthogonality gives us the
+            closest projection. Let’s see why.
+          </p>
+          <figure class="post-figure">
+            <img src="../assets/posts/pca-orthogonal-projection-proof.svg" alt="A: point x, its orthogonal projection p onto subspace U, and another candidate u in U. B: the right triangle whose sides are the residual r, p minus u, and x minus u." loading="lazy" />
+            <figcaption>A. Orthogonal projection onto \(U\). B. The corresponding right triangle.</figcaption>
+          </figure>
+          <p>
+            Our goal is to find a point in \(U\) with the closest distance to
+            \(x\). The residual in the image, where it is orthogonal to \(U\),
+            is given by
+          </p>
+          <div class="math-block">
+            \[
+            r=x-p.
+            \]
+          </div>
+          <p>
+            So \(x=r+p\). There could be other points in the
+            subspace \(U\), like the point \(u\) in image A. Let’s use this
+            \(u\) as a variable and subtract it from both sides.
+          </p>
+          <div class="math-block">
+            \[
+            x-u=r+(p-u).
+            \]
+          </div>
+          <p>
+            Notice that \(p\) and \(u\) are in \(U\). Since \(U\) is a
+            subspace (closed under addition and scalar multiplication),
+            \(p-u\) is guaranteed to be in \(U\). Also, since \(r\) is
+            perpendicular to \(U\), it follows that \(r\) and \(p-u\) must
+            be orthogonal. Based on this, we can see our last equation in terms
+            of image B, where \(x-u\) is the hypotenuse and \(r\), \(p-u\)
+            are the legs of a right triangle. Using Pythagoras,
+          </p>
+          <div class="math-block">
+            \[
+            \lVert x-u\rVert^2=\lVert r\rVert^2+\lVert p-u\rVert^2.
+            \]
+          </div>
+          <p>
+            The last term can only be zero or positive, and it becomes zero
+            when \(u=p\). So the squared distance is minimized at \(p\).
+          </p>
+          <p>
+            Intuitively, any other point in \(U\) will
+            have a longer residual, as it requires moving sideways in \(U\).
+          </p>
+          <p>
+            Showing why the orthogonal projection is closest might have seemed
+            like a detour. But now we can use that same orthogonality to answer
+            the question of this blog post. Indeed, we can see the decomposition
+            of every centered point as
+          </p>
+          <div class="math-block">
+            \[
+            \tilde{x}_i=p_i+r_i.
+            \]
+          </div>
+          <p>
+            And since \(p_i\in U\) and \(r_i\perp U\), we have
+            \(p_i\perp r_i\). So we can use Pythagoras directly:
+          </p>
+          <div class="math-block">
+            \[
+            \lVert\tilde{x}_i\rVert^2=\lVert p_i\rVert^2+\lVert r_i\rVert^2.
+            \]
+          </div>
+          <p>
+            If we now average over all our points (sum and divide by \(n\) on
+            both sides),
+          </p>
+          <div class="math-block">
+            \[
+            \frac{1}{n}\sum_{i=1}^{n}\lVert\tilde{x}_i\rVert^2
+            =\frac{1}{n}\sum_{i=1}^{n}\lVert p_i\rVert^2
+            +\frac{1}{n}\sum_{i=1}^{n}\lVert r_i\rVert^2.
+            \]
+          </div>
+          <p>We can literally interpret those terms as:</p>
+          <div class="math-block">
+            \[
+            \text{total variance}=\text{retained variance}+\text{discarded variance}.
+            \]
+          </div>
+          <p>
+            Why? Remember that we said centering our data would pay off in this
+            section.
+          </p>
+          <p>The total variance of our vector-valued data is defined as</p>
+          <div class="math-block">
+            \[
+            \frac{1}{n}\sum_{i=1}^{n}\lVert x_i-\bar{x}\rVert^2.
+            \]
+          </div>
+          <p>But since the centered data have mean zero,</p>
+          <div class="math-block">
+            \[
+            \text{total variance}=\frac{1}{n}\sum_{i=1}^{n}\lVert\tilde{x}_i\rVert^2.
+            \]
+          </div>
+          <p>And \(p_i\), \(r_i\) are also centered.</p>
+          <p>For the projection, with \(P\) the orthogonal projection matrix:</p>
+          <div class="math-block">
+            \[
+            p_i=P\tilde{x}_i,
+            \]
+          </div>
+          <div class="math-block">
+            \[
+            \frac{1}{n}\sum_{i=1}^{n}p_i
+            =\frac{1}{n}\sum_{i=1}^{n}P\tilde{x}_i,
+            \]
+          </div>
+          <div class="math-block">
+            \[
+            \frac{1}{n}\sum_{i=1}^{n}p_i
+            =P\left(\frac{1}{n}\sum_{i=1}^{n}\tilde{x}_i\right),
+            \]
+          </div>
+          <p>since \(P\) is the same matrix.</p>
+          <p>
+            But \(\frac{1}{n}\sum_{i=1}^{n}\tilde{x}_i=0\), so
+          </p>
+          <div class="math-block">
+            \[
+            \frac{1}{n}\sum_{i=1}^{n}p_i=P(0)=0.
+            \]
+          </div>
+          <p>For the residual,</p>
+          <div class="math-block">
+            \[
+            r_i=\tilde{x}_i-p_i=(I-P)\tilde{x}_i.
+            \]
+          </div>
+          <p>So</p>
+          <div class="math-block">
+            \[
+            \frac{1}{n}\sum_{i=1}^{n}r_i
+            =(I-P)\left(\frac{1}{n}\sum_{i=1}^{n}\tilde{x}_i\right)=0.
+            \]
+          </div>
+          <p>Therefore,</p>
+          <div class="math-block">
+            \[
+            \underbrace{\frac{1}{n}\sum_{i=1}^{n}\lVert\tilde{x}_i\rVert^2}_{\text{total variance}}
+            =\underbrace{\frac{1}{n}\sum_{i=1}^{n}\lVert p_i\rVert^2}_{\text{retained variance}}
+            +\underbrace{\frac{1}{n}\sum_{i=1}^{n}\lVert r_i\rVert^2}_{\text{discarded variance}}.
+            \]
+          </div>
+          <p>
+            And we know that PCA directions are eigenvectors of the covariance
+            matrix. But how do their eigenvalues enter this picture?
+          </p>
+          <p>
+            Let \(v_j\) be one of these directions, with length one. The
+            coordinate of a centered point along this direction is
+            \(v_j^{\mathsf T}\tilde{x}_i\). Since the data are centered, the
+            variance of these coordinates is
+          </p>
+          <div class="math-block">
+            \[
+            \frac{1}{n}\sum_{i=1}^{n}\left(v_j^{\mathsf T}\tilde{x}_i\right)^2.
+            \]
+          </div>
+          <p>
+            Remember, \(v_j^{\mathsf T}\tilde{x}_i\) is a scalar, so
+          </p>
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            \left(v_j^{\mathsf T}\tilde{x}_i\right)^2
+            &=\left(v_j^{\mathsf T}\tilde{x}_i\right)
+              \left(v_j^{\mathsf T}\tilde{x}_i\right)^{\mathsf T}\\
+            &=\left(v_j^{\mathsf T}\tilde{x}_i\right)
+              \left(\tilde{x}_i^{\mathsf T}v_j\right)\\
+            &=v_j^{\mathsf T}\left(\tilde{x}_i\tilde{x}_i^{\mathsf T}\right)v_j.
+            \end{aligned}
+            \]
+          </div>
+          <p>
+            Then, since \(v_j\) is the same direction for every point, we can
+            take it outside the sum:
+          </p>
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            &\frac{1}{n}\sum_{i=1}^{n}\left(v_j^{\mathsf T}\tilde{x}_i\right)^2\\
+            &\quad=\frac{1}{n}\sum_{i=1}^{n}
+              v_j^{\mathsf T}\left(\tilde{x}_i\tilde{x}_i^{\mathsf T}\right)v_j\\
+            &\quad=v_j^{\mathsf T}
+              \underbrace{\left(\frac{1}{n}\sum_{i=1}^{n}
+              \tilde{x}_i\tilde{x}_i^{\mathsf T}\right)}_{S}v_j\\
+            &\quad=v_j^{\mathsf T}Sv_j.
+            \end{aligned}
+            \]
+          </div>
+          <p>
+            The sum in parentheses is our covariance matrix
+            \(S=\frac{1}{n}X_c^{\mathsf T}X_c\).
+          </p>
+          <p>
+            Finally, remember that \(Sv_j=\lambda_jv_j\) and
+            \(v_j^{\mathsf T}v_j=1\). Therefore,
+          </p>
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            v_j^{\mathsf T}Sv_j
+            &=v_j^{\mathsf T}\left(\lambda_jv_j\right)\\
+            &=\lambda_j\left(v_j^{\mathsf T}v_j\right)\\
+            &=\lambda_j.
+            \end{aligned}
+            \]
+          </div>
+          <p>
+            So each eigenvalue measures the variance along its principal
+            direction.
+          </p>
+          <p>
+            In our 2D example, the two orthogonal principal directions cover
+            the whole space, so
+          </p>
+          <div class="math-block">
+            \[
+            \text{total variance}=\lambda_1+\lambda_2.
+            \]
+          </div>
+          <p>
+            Keeping the first component retains variance \(\lambda_1\). The
+            rest is the squared residual error we have been averaging. So our
+            variance split becomes
+          </p>
+          <div class="math-block">
+            \[
+            \lambda_1+\lambda_2=\lambda_1+\operatorname{MSE}.
+            \]
+          </div>
+          <p>Therefore,</p>
+          <div class="math-block">
+            \[
+            \operatorname{MSE}=\lambda_2=\frac{1}{n}\sum_{i=1}^{n}\lVert r_i\rVert^2.
+            \]
+          </div>
+          <p>
+            And in general, with this setup, our \(d\) principal directions
+            form an orthonormal basis. If we keep the first \(k\), the residual
+            contains the components we discarded:
+          </p>
+          <div class="math-block">
+            \[
+            r_i=\sum_{j=k+1}^{d}\left(v_j^{\mathsf T}\tilde{x}_i\right)v_j.
+            \]
+          </div>
+          <p>
+            Since these directions are orthonormal, the cross terms vanish
+            when we square the length:
+          </p>
+          <div class="math-block">
+            \[
+            \lVert r_i\rVert^2
+            =\sum_{j=k+1}^{d}\left(v_j^{\mathsf T}\tilde{x}_i\right)^2.
+            \]
+          </div>
+          <p>Then we average over our points:</p>
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            \operatorname{MSE}
+            &=\frac{1}{n}\sum_{i=1}^{n}\lVert r_i\rVert^2\\
+            &=\frac{1}{n}\sum_{i=1}^{n}\sum_{j=k+1}^{d}
+              \left(v_j^{\mathsf T}\tilde{x}_i\right)^2\\
+            &=\sum_{j=k+1}^{d}
+              \underbrace{\left(\frac{1}{n}\sum_{i=1}^{n}
+              \left(v_j^{\mathsf T}\tilde{x}_i\right)^2\right)}_{\lambda_j}.
+            \end{aligned}
+            \]
+          </div>
+          <p>Therefore,</p>
+          <div class="math-block">
+            \[
+            \operatorname{MSE}=\sum_{j=k+1}^{d}\lambda_j,
+            \]
+          </div>
+          <p>
+            the sum of the eigenvalues of the discarded components.
+          </p>
+        </section>
+
+        <section class="post-section" id="pca-playground">
+          <h2>Visualizing the Lost Variance</h2>
+          <p>
+            We saw how the discarded variance becomes reconstruction error.
+            Let’s now rotate the line we project onto and see how much we lose.
+          </p>
+
+          <div class="interactive-breakout">
+            <iframe
+              class="score-playground-frame"
+              data-pca-reconstruction-playground
+              src="../assets/posts/pca-reconstruction-playground.html"
+              title="Interactive PCA projection and reconstruction error playground"
+              loading="lazy"
+            ></iframe>
+          </div>
+        </section>
+
+        <section class="post-section">
+          <h2>What I Think I Learned</h2>
+          <p>
+            Compression is not a free lunch. We must be aware of what we are
+            sacrificing when doing it. In this post, we focused our attention
+            on PCA and found that the variance we lost was equal to the
+            reconstruction MSE.
+          </p>
+          <p>
+            It was pleasing to see how orthogonality provides us with the
+            closest projection, and how squared lengths become variance (after
+            centering and averaging).
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Open Questions</h2>
+          <ul class="question-list">
+            <li>What do we lose in a nonlinear setting, like a VAE?</li>
+            <li>Besides variance, what other features are important to retain in a compression?</li>
+          </ul>
+        </section>
+
+        <section class="post-section">
+          <h2>References</h2>
+          <ul class="references">
+            <li><a href="https://mml-book.github.io/book/mml-book.pdf#page=324">Mathematics for Machine Learning, Chapter 10: Dimensionality Reduction with Principal Component Analysis</a></li>
+            <li><a href="https://www.3blue1brown.com/lessons/eigenvalues/">3Blue1Brown: Eigenvectors and eigenvalues</a></li>
+            <li><a href="https://www.youtube.com/watch?v=l6DKRf-fAAM">3Blue1Brown: Reinventing Entropy | Compression is Intelligence, Part 1</a></li>
+            <li><a href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/notebooks/w09_pca_svd_solved.ipynb">Companion notebook: Week 9 — PCA and SVD</a></li>
+          </ul>
+        </section>
+      </article>
+
+      <p class="post-nav"><a href="../writing.html">Back to writing</a></p>
+
+      <footer class="footer">
+        <p>Find me online or get in touch.</p>
+        <div class="links">
+          <a href="https://github.com/juancopi81">GitHub</a>
+          <a href="https://huggingface.co/juancopi81">Hugging Face</a>
+          <a href="https://www.linkedin.com/in/juancarlospinerosp/">LinkedIn</a>
+          <a href="https://x.com/juancopi81">X / Twitter</a>
+          <a href="mailto:juancopi_81@hotmail.com">Email</a>
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      const pcaReconstructionPlayground = document.querySelector(
+        "[data-pca-reconstruction-playground]",
+      );
+
+      window.addEventListener("message", (event) => {
+        if (
+          !pcaReconstructionPlayground ||
+          event.source !== pcaReconstructionPlayground.contentWindow ||
+          event.origin !== window.location.origin ||
+          event.data?.type !== "pca-reconstruction:resize"
+        ) {
+          return;
+        }
+
+        const requestedHeight = Number(event.data.height);
+        if (!Number.isFinite(requestedHeight)) return;
+
+        const frameHeight = Math.max(600, Math.min(requestedHeight + 2, 4000));
+        pcaReconstructionPlayground.style.minHeight = "0";
+        pcaReconstructionPlayground.style.height = `${frameHeight}px`;
+      });
+    </script>
+  </body>
+</html>
