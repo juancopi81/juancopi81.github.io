@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>Juan Carlos — Research Log</title>
+    <link>https://juancopi81.github.io/writing.html</link>
+    <description>Research logs, derivations, and tutorials from personal machine learning projects, including an ongoing series rebuilding diffusion models from first principles.</description>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 17 Sep 2026 00:00:00 +0000</lastBuildDate>
+    <atom:link href="https://juancopi81.github.io/feed.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>In Search of PCA’s Lost Variance</title>
+      <link>https://juancopi81.github.io/posts/2026-09-17-in-search-of-pcas-lost-variance.html</link>
+      <guid isPermaLink="true">https://juancopi81.github.io/posts/2026-09-17-in-search-of-pcas-lost-variance.html</guid>
+      <pubDate>Thu, 17 Sep 2026 00:00:00 +0000</pubDate>
+      <description>A geometric derivation of why PCA reconstruction mean-squared error equals the sum of the discarded eigenvalues, through orthogonal projections and a 2D example.</description>
+      <media:thumbnail url="https://juancopi81.github.io/assets/social/2026-09-17-in-search-of-pcas-lost-variance.png" />
+    </item>
+    <item>
+      <title>Forward Process, Transformations, and Gregor Samsa</title>
+      <link>https://juancopi81.github.io/posts/2026-09-03-forward-process-transformations-and-gregor-samsa.html</link>
+      <guid isPermaLink="true">https://juancopi81.github.io/posts/2026-09-03-forward-process-transformations-and-gregor-samsa.html</guid>
+      <pubDate>Thu, 03 Sep 2026 00:00:00 +0000</pubDate>
+      <description>A derivation and geometric playground connecting the affine Gaussian transformation in a diffusion forward process to covariance and the Jacobian determinant.</description>
+      <media:thumbnail url="https://juancopi81.github.io/assets/social/2026-09-03-forward-process-transformations-and-gregor-samsa.png" />
+    </item>
+    <item>
+      <title>Sampling Our Way Down, One Gaussian Step at a Time</title>
+      <link>https://juancopi81.github.io/posts/2026-08-13-sampling-our-way-down-from-gaussian-distributions.html</link>
+      <guid isPermaLink="true">https://juancopi81.github.io/posts/2026-08-13-sampling-our-way-down-from-gaussian-distributions.html</guid>
+      <pubDate>Thu, 13 Aug 2026 00:00:00 +0000</pubDate>
+      <description>A small-step Bayes derivation showing why the reverse conditional can be approximated by a Gaussian even when the previous-state marginal is not Gaussian.</description>
+      <media:thumbnail url="https://juancopi81.github.io/assets/social/2026-08-13-sampling-our-way-down-from-gaussian-distributions.png" />
+    </item>
+    <item>
+      <title>KL Divergence Is Not a Distance</title>
+      <link>https://juancopi81.github.io/posts/2026-08-06-kl-divergence-is-not-a-distance.html</link>
+      <guid isPermaLink="true">https://juancopi81.github.io/posts/2026-08-06-kl-divergence-is-not-a-distance.html</guid>
+      <pubDate>Thu, 06 Aug 2026 00:00:00 +0000</pubDate>
+      <description>A daily-life example using car and train commute-time distributions to understand why KL divergence is asymmetric and how it can be used to compare distributions.</description>
+      <media:thumbnail url="https://juancopi81.github.io/assets/social/2026-08-06-kl-divergence-is-not-a-distance.png" />
+    </item>
+    <item>
+      <title>Two Ways to Learn the Same Score Field</title>
+      <link>https://juancopi81.github.io/posts/2026-07-30-two-ways-to-learn-the-same-score-field.html</link>
+      <guid isPermaLink="true">https://juancopi81.github.io/posts/2026-07-30-two-ways-to-learn-the-same-score-field.html</guid>
+      <pubDate>Thu, 30 Jul 2026 00:00:00 +0000</pubDate>
+      <description>A small experiment comparing two ways to train a toy neural network to learn the score of a noisy three-component Gaussian mixture.</description>
+      <media:thumbnail url="https://juancopi81.github.io/assets/social/2026-07-30-two-ways-to-learn-the-same-score-field.png" />
+    </item>
+    <item>
+      <title>Averaging Paths to the Peaks of Our Mountains</title>
+      <link>https://juancopi81.github.io/posts/2026-07-23-averaging-paths-to-the-peaks-of-our-mountains.html</link>
+      <guid isPermaLink="true">https://juancopi81.github.io/posts/2026-07-23-averaging-paths-to-the-peaks-of-our-mountains.html</guid>
+      <pubDate>Thu, 23 Jul 2026 00:00:00 +0000</pubDate>
+      <description>A derivation of how the noisy marginal score connects to the posterior conditional mean through an average over plausible clean samples.</description>
+      <media:thumbnail url="https://juancopi81.github.io/assets/social/2026-07-23-averaging-paths-to-the-peaks-of-our-mountains.png" />
+    </item>
+    <item>
+      <title>Changing Variables Without Changing Probability</title>
+      <link>https://juancopi81.github.io/posts/2026-07-16-transforming-random-variables.html</link>
+      <guid isPermaLink="true">https://juancopi81.github.io/posts/2026-07-16-transforming-random-variables.html</guid>
+      <pubDate>Thu, 16 Jul 2026 00:00:00 +0000</pubDate>
+      <description>A short derivation of the density of a transformed random variable, with intuition for how the Jacobian compensates for stretched lengths and areas.</description>
+      <media:thumbnail url="https://juancopi81.github.io/assets/social/2026-07-16-transforming-random-variables.png" />
+    </item>
+    <item>
+      <title>When the Score Does Not Point Straight to the Mean</title>
+      <link>https://juancopi81.github.io/posts/2026-07-09-when-the-score-does-not-point-straight-to-the-mean.html</link>
+      <guid isPermaLink="true">https://juancopi81.github.io/posts/2026-07-09-when-the-score-does-not-point-straight-to-the-mean.html</guid>
+      <pubDate>Thu, 09 Jul 2026 00:00:00 +0000</pubDate>
+      <description>An interactive look at how covariance reshapes the score of a multivariate Gaussian, and why the direction of higher density does not always point straight to the mean.</description>
+      <media:thumbnail url="https://juancopi81.github.io/assets/social/2026-07-09-when-the-score-does-not-point-straight-to-the-mean.png" />
+    </item>
+    <item>
+      <title>Denoising Is Not Inversion</title>
+      <link>https://juancopi81.github.io/posts/2026-07-02-denoising-is-not-inversion.html</link>
+      <guid isPermaLink="true">https://juancopi81.github.io/posts/2026-07-02-denoising-is-not-inversion.html</guid>
+      <pubDate>Thu, 02 Jul 2026 00:00:00 +0000</pubDate>
+      <description>A conditional-expectation note on why denoising under squared error is estimation, not exact inversion.</description>
+      <media:thumbnail url="https://juancopi81.github.io/assets/social/2026-07-02-denoising-is-not-inversion.png" />
+    </item>
+    <item>
+      <title>Score of a Gaussian</title>
+      <link>https://juancopi81.github.io/posts/2026-06-25-score-of-a-gaussian.html</link>
+      <guid isPermaLink="true">https://juancopi81.github.io/posts/2026-06-25-score-of-a-gaussian.html</guid>
+      <pubDate>Thu, 25 Jun 2026 00:00:00 +0000</pubDate>
+      <description>A derivation-driven note on why the score of a one-dimensional Gaussian points toward higher log-density, which means back toward the mean.</description>
+      <media:thumbnail url="https://juancopi81.github.io/assets/social/2026-06-25-score-of-a-gaussian.png" />
+    </item>
+    <item>
+      <title>Expected Value of a Simple Forward Process</title>
+      <link>https://juancopi81.github.io/posts/2026-06-11-expected-value-simple-forward-process.html</link>
+      <guid isPermaLink="true">https://juancopi81.github.io/posts/2026-06-11-expected-value-simple-forward-process.html</guid>
+      <pubDate>Thu, 11 Jun 2026 00:00:00 +0000</pubDate>
+      <description>A diffusion note on what it really means for noisy images to stay centered around the original image on average.</description>
+      <media:thumbnail url="https://juancopi81.github.io/assets/social/2026-06-11-expected-value-simple-forward-process.png" />
+    </item>
+    <item>
+      <title>Sequences of Bernoulli Outcomes with the Same Probability</title>
+      <link>https://juancopi81.github.io/posts/2026-06-04-bernoulli-sequences-same-probability.html</link>
+      <guid isPermaLink="true">https://juancopi81.github.io/posts/2026-06-04-bernoulli-sequences-same-probability.html</guid>
+      <pubDate>Thu, 04 Jun 2026 00:00:00 +0000</pubDate>
+      <description>A first-principles probability note on why conditioning on the total count makes all Bernoulli sequences with exactly k successes equally likely.</description>
+      <media:thumbnail url="https://juancopi81.github.io/assets/social/2026-06-04-bernoulli-sequences-same-probability.png" />
+    </item>
+  </channel>
+</rss>
