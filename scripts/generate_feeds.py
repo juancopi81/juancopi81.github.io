@@ -6,13 +6,15 @@ only needs its normal head block:
 
     python3 scripts/generate_feeds.py
 
-Re-running is idempotent. Pass a different analytics code with --code.
+Re-running changes nothing unless a page changed. Pass a different
+analytics code with --code.
 """
 from __future__ import annotations
 
 import argparse
 import html
 import re
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -88,14 +90,28 @@ def write_feed(items: list[dict]) -> None:
 """)
 
 
+def last_modified(path: Path) -> str:
+    """The file's last commit date, so the sitemap is stable between runs."""
+    rel = path.relative_to(ROOT).as_posix()
+    try:
+        out = subprocess.run(["git", "log", "-1", "--format=%cs", "--", rel],
+                             cwd=ROOT, capture_output=True, text=True, check=True)
+        if out.stdout.strip():
+            return out.stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        pass
+    # Not committed yet: fall back to the publish date, then to today.
+    return (meta(path.read_text(), "article:published_time")
+            or datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+
+
 def write_sitemap(items: list[dict]) -> None:
     rows = []
     for path in pages():
         rel = path.relative_to(ROOT).as_posix()
         loc = f"{SITE}/" if rel == "index.html" else f"{SITE}/{rel}"
-        published = meta(path.read_text(), "article:published_time")
-        lastmod = published or datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        rows.append(f"  <url>\n    <loc>{loc}</loc>\n    <lastmod>{lastmod}</lastmod>\n  </url>")
+        rows.append(f"  <url>\n    <loc>{loc}</loc>\n"
+                    f"    <lastmod>{last_modified(path)}</lastmod>\n  </url>")
     (ROOT / "sitemap.xml").write_text(
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
