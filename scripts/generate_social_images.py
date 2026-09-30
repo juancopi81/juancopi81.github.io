@@ -5,8 +5,12 @@ Cards are built from metadata already present in the HTML (og:title, the
 post-meta line, and any figure the post embeds), so a post only needs its
 normal front matter to get a card.
 
-    pip install Pillow
-    python3 scripts/generate_social_images.py
+Use a Python environment with Pillow. For an isolated setup, run from the
+repository root:
+
+    python3 -m venv .venv
+    .venv/bin/python -m pip install Pillow
+    .venv/bin/python scripts/generate_social_images.py
 
 Output lands in assets/social/. Re-running is idempotent.
 """
@@ -14,9 +18,21 @@ from __future__ import annotations
 
 import html
 import re
+import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+try:
+    from PIL import Image, ImageDraw, ImageFont
+except ModuleNotFoundError as exc:
+    if exc.name != "PIL":
+        raise
+    raise SystemExit(
+        f"Pillow is not installed for {sys.executable}.\n"
+        "Use a Python environment with Pillow, or from the repository root run:\n"
+        "  python3 -m venv .venv\n"
+        "  .venv/bin/python -m pip install Pillow\n"
+        "  .venv/bin/python scripts/generate_social_images.py"
+    ) from None
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "assets" / "social"
