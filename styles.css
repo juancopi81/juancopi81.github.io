@@ -173,6 +173,28 @@ a {
   margin-top: 40px;
 }
 
+.series-list {
+  padding-left: 28px;
+}
+
+.series-list > li {
+  padding: 0 0 24px 8px;
+}
+
+.series-list > li + li {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+}
+
+.series-list > li::marker {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.series-list p:last-child {
+  margin-bottom: 0;
+}
+
 .post-header {
   border-bottom: 1px solid var(--border);
   margin-bottom: 40px;
