@@ -9,6 +9,7 @@ Published with GitHub Pages from this repository.
 - `index.html` — homepage
 - `projects.html` — selected personal/public projects
 - `writing.html` — published writing
+- `diffusion-from-first-principles.html` — reading path through the diffusion research log
 - `posts/` — individual static blog posts
 - `templates/post-template.html` — copy/paste starter for new posts
 - `about.html` — bio and links
@@ -23,7 +24,15 @@ database.
 2. Paste it into `posts/YYYY-MM-DD-short-title.html`.
 3. Update the `<title>`, `<h1>`, date, tags, and body sections.
 4. Add a card to the `Research Log` section in `writing.html`, newest first.
-5. Preview locally before publishing.
+5. For a diffusion-series post, add it to the appropriate theme in
+   `diffusion-from-first-principles.html`, keeping publication order and the
+   same description as the Writing card. Continue the list numbering across
+   themes.
+6. When updating the series progress, check `PROGRESS.md` in the curriculum
+   repo and update the page's "As of" date.
+7. Run `python3 scripts/generate_feeds.py` to refresh the feed, sitemap,
+   robots.txt, and page-head links.
+8. Preview locally before publishing.
 
 Suggested first-principles shape:
 

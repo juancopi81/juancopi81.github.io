@@ -35,7 +35,8 @@ FEED_LINK_MARK = 'rel="alternate"'
 
 
 def pages() -> list[Path]:
-    return ([ROOT / n for n in ("index.html", "about.html", "projects.html", "writing.html")]
+    return ([ROOT / n for n in ("index.html", "about.html", "projects.html", "writing.html",
+                              "diffusion-from-first-principles.html")]
             + sorted((ROOT / "posts").glob("*.html")))
 
 

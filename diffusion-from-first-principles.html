@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diffusion from First Principles | Juan Carlos</title>
+
+  <meta name="description" content="Notes, derivations, and small experiments from my ongoing study of diffusion and generative models, with a reading path from probability to score models and beyond." />
+  <meta name="author" content="Juan Carlos" />
+  <link rel="canonical" href="https://juancopi81.github.io/diffusion-from-first-principles.html" />
+  <link rel="alternate" type="application/rss+xml" title="Juan Carlos — Research Log" href="https://juancopi81.github.io/feed.xml" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Juan Carlos" />
+  <meta property="og:title" content="Diffusion from First Principles" />
+  <meta property="og:description" content="Notes, derivations, and small experiments from my ongoing study of diffusion and generative models, with a reading path from probability to score models and beyond." />
+  <meta property="og:url" content="https://juancopi81.github.io/diffusion-from-first-principles.html" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:image" content="https://juancopi81.github.io/assets/social/default.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Juan Carlos — applied ML, generative AI, and research-to-production systems" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@juancopi81" />
+  <meta name="twitter:creator" content="@juancopi81" />
+  <meta name="twitter:title" content="Diffusion from First Principles" />
+  <meta name="twitter:description" content="Notes, derivations, and small experiments from my ongoing study of diffusion and generative models, with a reading path from probability to score models and beyond." />
+  <meta name="twitter:image" content="https://juancopi81.github.io/assets/social/default.png" />
+  <meta name="twitter:image:alt" content="Juan Carlos — applied ML, generative AI, and research-to-production systems" />
+  <link rel="stylesheet" href="styles.css" />
+  <script data-goatcounter="https://juancopi81.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</head>
+<body>
+  <main class="page">
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="projects.html">Projects</a>
+      <a href="writing.html">Writing</a>
+      <a href="about.html">About</a>
+    </nav>
+
+    <header>
+      <h1>Diffusion from First Principles</h1>
+      <p class="subtitle">
+        Notes, derivations, and small experiments from my ongoing study of
+        diffusion and generative models.
+      </p>
+      <p>
+        I'm working through a 52-week curriculum at my own pace, starting with
+        probability and linear algebra and moving toward diffusion models,
+        SDEs, and flow matching. These posts are where I share the questions
+        I'm working through, the things I try, and what I think I learned.
+      </p>
+      <div class="links">
+        <a href="posts/2026-06-04-bernoulli-sequences-same-probability.html">Start with the first note</a>
+        <a href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/CURRICULUM.md">View the curriculum</a>
+      </div>
+    </header>
+
+    <aside class="card" aria-labelledby="series-progress">
+      <h2 id="series-progress">Where I am now</h2>
+      <p>
+        <strong>Phase 2: Linear algebra and generative modeling basics.</strong>
+        I've completed Week 12 of 52, through VAEs and normalizing flows.
+        Next is Week 13: optimization basics.
+      </p>
+      <p class="muted">
+        As of <time datetime="2026-09-30">September 30, 2026</time>.
+        <a href="https://github.com/juancopi81/diffusion-research-curriculum/blob/main/PROGRESS.md">Progress and study artifacts</a>.
+        The posts below are selected notes from that work.
+      </p>
+    </aside>
+
+    <p>
+      Read from the beginning or pick a theme. The notes follow publication
+      order, so you can follow the questions as they developed.
+    </p>
+
+    <section class="writing-section" aria-labelledby="probability-and-scores">
+      <h2 id="probability-and-scores">Probability and score functions</h2>
+      <p class="section-intro">From conditioning and expectation to Gaussian scores and the limits of denoising.</p>
+      <ol class="series-list">
+        <li>
+          <article class="post-card">
+            <h3><a href="posts/2026-06-04-bernoulli-sequences-same-probability.html">Sequences of Bernoulli Outcomes with the Same Probability</a></h3>
+            <p class="post-meta">June 4, 2026 · Probability · Bernoulli trials</p>
+            <p>
+              A first-principles probability note on why conditioning on the total
+              count makes all Bernoulli sequences with exactly <code>k</code>
+              successes equally likely.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="post-card">
+            <h3><a href="posts/2026-06-11-expected-value-simple-forward-process.html">Expected Value of a Simple Forward Process</a></h3>
+            <p class="post-meta">June 11, 2026 · Diffusion · Expectation</p>
+            <p>
+              A diffusion note on what it really means for noisy images to stay
+              centered around the original image on average.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="post-card">
+            <h3><a href="posts/2026-06-25-score-of-a-gaussian.html">Score of a Gaussian</a></h3>
+            <p class="post-meta">June 25, 2026 · Diffusion · Score functions</p>
+            <p>
+              A derivation-driven note on why the score of a one-dimensional
+              Gaussian points toward higher log-density, which means back toward
+              the mean.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="post-card">
+            <h3><a href="posts/2026-07-02-denoising-is-not-inversion.html">Denoising Is Not Inversion</a></h3>
+            <p class="post-meta">July 2, 2026 · Diffusion · Conditional expectation</p>
+            <p>
+              A conditional-expectation note on why denoising under squared error is
+              estimation, not exact inversion.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="post-card">
+            <h3><a href="posts/2026-07-09-when-the-score-does-not-point-straight-to-the-mean.html">When the Score Does Not Point Straight to the Mean</a></h3>
+            <p class="post-meta">July 9, 2026 · Diffusion · Score functions</p>
+            <p>
+              An interactive look at how covariance reshapes the score of a
+              multivariate Gaussian, and why the direction of higher density does
+              not always point straight to the mean.
+            </p>
+          </article>
+        </li>
+      </ol>
+    </section>
+
+    <section class="writing-section" aria-labelledby="densities-and-denoising">
+      <h2 id="densities-and-denoising">Transforming densities and learning to denoise</h2>
+      <p class="section-intro">Change of variables, posterior averages, a toy score-matching experiment, and reverse steps.</p>
+      <ol class="series-list" start="6">
+        <li>
+          <article class="post-card">
+            <h3><a href="posts/2026-07-16-transforming-random-variables.html">Changing Variables Without Changing Probability</a></h3>
+            <p class="post-meta">July 16, 2026 · Probability · Change of variables</p>
+            <p>
+              A short derivation of the density of a transformed random variable,
+              with intuition for how the Jacobian compensates for stretched lengths
+              and areas.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="post-card">
+            <h3><a href="posts/2026-07-23-averaging-paths-to-the-peaks-of-our-mountains.html">Averaging Paths to the Peaks of Our Mountains</a></h3>
+            <p class="post-meta">July 23, 2026 · Diffusion · Score functions</p>
+            <p>
+              A derivation of how the noisy marginal score connects to the
+              posterior conditional mean through an average over plausible clean
+              samples.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="post-card">
+            <h3><a href="posts/2026-07-30-two-ways-to-learn-the-same-score-field.html">Two Ways to Learn the Same Score Field</a></h3>
+            <p class="post-meta">July 30, 2026 · Diffusion · Score matching</p>
+            <p>
+              A small experiment comparing two ways to train a toy neural network
+              to learn the score of a noisy three-component Gaussian mixture.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="post-card">
+            <h3><a href="posts/2026-08-06-kl-divergence-is-not-a-distance.html">KL Divergence Is Not a Distance</a></h3>
+            <p class="post-meta">August 6, 2026 · Probability · KL divergence</p>
+            <p>
+              A daily-life example using car and train commute-time distributions
+              to understand why KL divergence is asymmetric and how it can be used
+              to compare distributions.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="post-card">
+            <h3><a href="posts/2026-08-13-sampling-our-way-down-from-gaussian-distributions.html">Sampling Our Way Down, One Gaussian Step at a Time</a></h3>
+            <p class="post-meta">August 13, 2026 · Diffusion · Reverse process</p>
+            <p>
+              A small-step Bayes derivation showing why the reverse conditional can
+              be approximated by a Gaussian even when the previous-state marginal is
+              not Gaussian.
+            </p>
+          </article>
+        </li>
+      </ol>
+    </section>
+
+    <section class="writing-section" aria-labelledby="gaussian-geometry">
+      <h2 id="gaussian-geometry">Gaussian geometry and linear representations</h2>
+      <p class="section-intro">Connecting the forward process to affine transformations, then asking what PCA leaves out.</p>
+      <ol class="series-list" start="11">
+        <li>
+          <article class="post-card">
+            <h3><a href="posts/2026-09-03-forward-process-transformations-and-gregor-samsa.html">Forward Process, Transformations, and Gregor Samsa</a></h3>
+            <p class="post-meta">September 3, 2026 · Diffusion · Gaussian transformations</p>
+            <p>
+              A derivation and geometric playground connecting the affine Gaussian
+              transformation in a diffusion forward process to covariance and the
+              Jacobian determinant.
+            </p>
+          </article>
+        </li>
+        <li>
+          <article class="post-card">
+            <h3><a href="posts/2026-09-17-in-search-of-pcas-lost-variance.html">In Search of PCA’s Lost Variance</a></h3>
+            <p class="post-meta">September 17, 2026 · PCA · Linear algebra</p>
+            <p>
+              A geometric derivation of why PCA reconstruction mean-squared error
+              equals the sum of the discarded eigenvalues, through orthogonal
+              projections and a 2D example.
+            </p>
+          </article>
+        </li>
+      </ol>
+    </section>
+
+    <p class="section-link">
+      <a href="writing.html">Browse all writing</a> or
+      <a href="feed.xml">subscribe via RSS</a> for new notes.
+    </p>
+
+    <footer class="footer">
+      <p>Find me online or get in touch.</p>
+      <div class="links">
+        <a href="https://github.com/juancopi81">GitHub</a>
+        <a href="https://huggingface.co/juancopi81">Hugging Face</a>
+        <a href="https://www.linkedin.com/in/juancarlospinerosp/">LinkedIn</a>
+        <a href="https://x.com/juancopi81">X / Twitter</a>
+        <a href="mailto:juancopi_81@hotmail.com">Email</a>
+      </div>
+    </footer>
+  </main>
+</body>
+</html>
