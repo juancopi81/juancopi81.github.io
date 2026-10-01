@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>When the VAE Meets Monte Carlo | Juan Carlos</title>
+
+    <meta name="description" content="Why averaging sampled reconstruction losses estimates an expectation in a VAE, through the law of large numbers and an indicator-variable approach to integration." />
+    <meta name="author" content="Juan Carlos" />
+    <link rel="canonical" href="https://juancopi81.github.io/posts/2026-10-01-when-the-vae-meets-monte-carlo.html" />
+    <link rel="alternate" type="application/rss+xml" title="Juan Carlos — Research Log" href="https://juancopi81.github.io/feed.xml" />
+
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Juan Carlos" />
+    <meta property="og:title" content="When the VAE Meets Monte Carlo" />
+    <meta property="og:description" content="Why averaging sampled reconstruction losses estimates an expectation in a VAE, through the law of large numbers and an indicator-variable approach to integration." />
+    <meta property="og:url" content="https://juancopi81.github.io/posts/2026-10-01-when-the-vae-meets-monte-carlo.html" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content="https://juancopi81.github.io/assets/social/2026-10-01-when-the-vae-meets-monte-carlo.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="When the VAE Meets Monte Carlo, with a shaded-area diagram showing indicator values below and above a curve." />
+    <meta property="article:published_time" content="2026-10-01" />
+    <meta property="article:author" content="Juan Carlos" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@juancopi81" />
+    <meta name="twitter:creator" content="@juancopi81" />
+    <meta name="twitter:title" content="When the VAE Meets Monte Carlo" />
+    <meta name="twitter:description" content="Why averaging sampled reconstruction losses estimates an expectation in a VAE, through the law of large numbers and an indicator-variable approach to integration." />
+    <meta name="twitter:image" content="https://juancopi81.github.io/assets/social/2026-10-01-when-the-vae-meets-monte-carlo.png" />
+    <meta name="twitter:image:alt" content="When the VAE Meets Monte Carlo, with a shaded-area diagram showing indicator values below and above a curve." />
+    <link rel="stylesheet" href="../styles.css" />
+    <script>
+      window.MathJax = {
+        tex: {
+          inlineMath: [["\\(", "\\)"]],
+          displayMath: [["\\[", "\\]"]],
+        },
+        svg: {
+          fontCache: "global",
+        },
+      };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+    <script data-goatcounter="https://juancopi81.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+  </head>
+  <body>
+    <main class="page post-page">
+      <nav class="nav post-nav-top">
+        <a href="../index.html">Home</a>
+        <a href="../projects.html">Projects</a>
+        <a href="../writing.html">Writing</a>
+        <a href="../about.html">About</a>
+      </nav>
+
+      <article class="post-content math-note">
+        <header class="post-header">
+          <p class="eyebrow">Research Log</p>
+          <h1>When the VAE Meets Monte Carlo</h1>
+          <p class="post-meta">October 1, 2026 · Monte Carlo · VAE</p>
+        </header>
+
+        <section class="post-section">
+          <h2>The Question</h2>
+          <p>Why do we need a Monte Carlo estimate of an expectation?</p>
+          <p>
+            Short answer: we need it when calculating the expectation exactly
+            is impossible or too expensive.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Why I Care</h2>
+          <p>
+            Today, I’d like to write a concise and focused entry about Monte
+            Carlo estimation. I believe this is a topic many ML practitioners
+            overlook or treat as a minor detail. But let’s not forget that
+            <a href="https://en.wikipedia.org/wiki/The_devil_is_in_the_details">the devil is in the details</a>.
+          </p>
+          <p>
+            Certainly, when reviewing the VAE, I got confused about the many
+            layers of “averaging” that were going on: across pixels, across
+            latent samples, across images, across mini-batches, across training
+            steps. So I thought it would be worth writing about it.
+          </p>
+          <p>
+            Besides, coding in the time of AI agents could make us laxer about
+            the particulars. But, paraphrasing
+            <a href="https://x.com/fchollet/status/2102166631439053014">François Chollet</a>,
+            delegating coding is fine; delegating understanding is not.
+          </p>
+          <p>
+            Now, concretely, when training probabilistic models, we face
+            instances when computing the whole expectation is intractable.
+            So we do the best we can: we draw samples, calculate a result for
+            each, and average them, a.k.a. Monte Carlo estimation. I wrote it
+            deliberately in simple terms so Monte Carlo, at least in this
+            context, doesn’t sound intimidating.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Setup and Definitions</h2>
+          <h3>Law of Large Numbers</h3>
+          <p>
+            As a quick recap of the law of large numbers, let
+            \(X_1,X_2,\ldots\) be independent and identically distributed
+            (i.i.d.) random variables with
+          </p>
+          <div class="math-block">
+            \[
+            \mathbb{E}[X_j]=\mu,
+            \qquad
+            \operatorname{Var}(X_j)=\sigma^2&lt;\infty.
+            \]
+          </div>
+          <p>The sample mean is defined as</p>
+          <div class="math-block">
+            \[
+            \overline{X}_n:=\frac{1}{n}\sum_{j=1}^{n}X_j.
+            \]
+          </div>
+          <p>
+            The law of large numbers (LLN) says that, as \(n\) tends to
+            infinity, the sample mean converges to the true mean \(\mu\).
+          </p>
+
+          <h3>VAE Setting</h3>
+          <p>
+            Apart from that, I want us to have in mind a concrete VAE iteration
+            that we’ll revisit later.
+          </p>
+          <ol>
+            <li>
+              We get a sample from our data. For concreteness, assume we are
+              working with the <a href="https://yann.lecun.com/exdb/mnist/">MNIST</a>
+              dataset and take an image of the digit 2, which we’ll call \(x\).
+            </li>
+            <li>We send this image of a 2 through the encoder.</li>
+            <li>
+              The encoder outputs a mean vector and a variance vector.
+            </li>
+            <li>
+              For illustration, we sample five independent latent vectors from
+              a normal distribution parameterized by the provided mean and
+              variances:
+              <div class="math-block">
+                \[
+                Z^{(k)}\overset{\mathrm{i.i.d.}}{\sim}
+                \mathcal{N}\!\left(
+                  \mu_\phi(x),\operatorname{diag}(\sigma_\phi^2(x))
+                \right),
+                \qquad k=1,\ldots,5.
+                \]
+              </div>
+            </li>
+            <li>
+              We then send these five samples through our decoder and get
+              five outputs.
+            </li>
+            <li>
+              We compare each output of the decoder against our original
+              image, the 2, using mean-squared error (MSE) as our reconstruction
+              loss in this example. We also have a KL divergence term in our
+              loss, but that term is not relevant in this post.
+            </li>
+            <li>
+              We then average the five losses: we add them up and divide
+              the result by five.
+            </li>
+          </ol>
+          <p>
+            I wrote the process for one image, but we usually do it in batches
+            and at different training steps. Did you notice the Monte Carlo
+            estimation? I wrote out the iteration this way to highlight it!
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Minimal Derivation</h2>
+          <p>
+            For our derivation, I’d like to start with a problem I found in
+            <a href="https://stat110.hsites.harvard.edu/sites/g/files/omnuum10111/files/stat110/files/strategic_practice_and_homework_11.pdf">Stat 110</a>.
+            I really enjoyed this problem, and I think solving it is a
+            wonderful exercise.
+          </p>
+          <p>
+            Before looking at the answer, I encourage you to try it yourself,
+            especially if this is the first time you’ve seen it.
+          </p>
+          <p>It goes like this:</p>
+          <p>
+            Let \(f\) be a complicated function whose integral
+            \(\int_a^b f(x)\,dx\) we want to approximate. For
+            \(a&lt;b\) and \(c&gt;0\), assume \(0\leq f(x)\leq c\) on
+            \([a,b]\). Draw \(n\) independent points
+            \((X_j,Y_j)\) uniformly from the rectangle
+            \(A=[a,b]\times[0,c]\). How can we use these points to estimate
+            the integral, and show that the estimate converges to its true
+            value as \(n\to\infty\)?
+          </p>
+          <p class="muted">
+            <small><em>Adapted from Stat 110, Strategic Practice 11, Problem 5.</em></small>
+          </p>
+          <figure class="post-figure">
+            <img src="../assets/posts/monte-carlo-rectangle-setup.svg" alt="A positive wavy function f inside a rectangle with horizontal bounds a and b and height c. Independent uniform sample points are scattered across the whole rectangle." loading="lazy" />
+            <figcaption>
+              Sample uniformly from the whole rectangle \(A\). The curve
+              stays between \(0\) and \(c\).
+            </figcaption>
+          </figure>
+
+          <h3>Solution</h3>
+          <p>
+            The key idea to solve this problem entails working with indicator
+            random variables. But don’t worry if you are not familiar with
+            that concept.
+          </p>
+          <p>
+            For each sampled point \((X_j,Y_j)\), we compare its height
+            \(Y_j\) with the curve’s height \(f(X_j)\). We’ll just define
+            a variable \(I_j\) such that
+          </p>
+          <div class="math-block">
+            \[
+            I_j=
+            \begin{cases}
+              1, &amp; \text{if }Y_j\leq f(X_j),\\
+              0, &amp; \text{otherwise}.
+            \end{cases}
+            \]
+          </div>
+          <p>Then the expected value of each indicator is</p>
+          <div class="math-block">
+            \[
+            \mathbb{E}[I_j]=P(I_j=1).
+            \]
+          </div>
+          <p>
+            The probability that point \(j\) lands below the curve equals
+            the ratio of the area below \(f(x)\) to the area of the
+            rectangle \(A\).
+          </p>
+          <figure class="post-figure">
+            <picture>
+              <source srcset="../assets/posts/monte-carlo-indicator-area-ratio.svg" type="image/svg+xml" />
+              <img src="../assets/posts/monte-carlo-indicator-area-ratio.png" alt="The area below f is shaded teal inside rectangle A. A teal point below the curve has indicator 1, and an amber point above it has indicator 0. Under uniform sampling, the probability of indicator 1 is the shaded area divided by the whole rectangle area." loading="lazy" />
+            </picture>
+            <figcaption>
+              Uniform sampling turns an area ratio into a probability:
+              \(P(I_j=1)\) is the fraction of the rectangle below the curve.
+            </figcaption>
+          </figure>
+          <div class="math-block">
+            \[
+            P(I_j=1)
+            =\frac{\text{area below }f(x)}{\text{area of rectangle }A}.
+            \]
+          </div>
+          <p>We know that</p>
+          <div class="math-block">
+            \[
+            \begin{aligned}
+            \text{area of rectangle }A&amp;=c(b-a),\\
+            \text{area below }f(x)\text{ from }a\text{ to }b
+              &amp;=\int_a^b f(x)\,dx.
+            \end{aligned}
+            \]
+          </div>
+          <p>Thus, it follows that</p>
+          <div class="math-block">
+            \[
+            \mathbb{E}[I_j]
+            =\frac{\int_a^b f(x)\,dx}{c(b-a)}.
+            \]
+          </div>
+          <p>
+            And by the law of large numbers, the empirical success frequency
+            converges to the true success probability as \(n\) increases:
+          </p>
+          <div class="math-block">
+            \[
+            \frac{1}{n}\sum_{j=1}^{n}I_j
+            \longrightarrow\mathbb{E}[I_1]
+            \qquad\text{as }n\to\infty.
+            \]
+          </div>
+          <p>So</p>
+          <div class="math-block">
+            \[
+            \frac{1}{n}\sum_{j=1}^{n}I_j
+            \longrightarrow\frac{\int_a^b f(x)\,dx}{c(b-a)}.
+            \]
+          </div>
+          <div class="math-block">
+            \[
+            \int_a^b f(x)\,dx
+            \approx c(b-a)\frac{1}{n}\sum_{j=1}^{n}I_j.
+            \]
+          </div>
+          <p>More precisely,</p>
+          <div class="math-block">
+            \[
+            c(b-a)\frac{1}{n}\sum_{j=1}^{n}I_j
+            \longrightarrow\int_a^b f(x)\,dx
+            \qquad\text{as }n\to\infty.
+            \]
+          </div>
+        </section>
+
+        <section class="post-section" id="monte-carlo-playground">
+          <h2>Watch the Estimate Take Shape</h2>
+          <p>
+            Try the indicator trick below. Increase the number of samples,
+            then start a new random run and compare the paths toward the
+            same area.
+          </p>
+          <div class="interactive-breakout">
+            <iframe
+              class="score-playground-frame"
+              data-monte-carlo-playground
+              src="../assets/posts/monte-carlo-integration-playground.html"
+              title="Interactive Monte Carlo integration using indicator random variables"
+              loading="lazy"
+            ></iframe>
+          </div>
+          <p>
+            <a href="../assets/posts/monte-carlo-integration-playground.html">Open the experiment on its own</a>.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>What I Think I Learned</h2>
+          <p>
+            Monte Carlo estimates are powerful tools when computing the exact
+            value is infeasible, as shown in the previous area problem. And
+            now we can connect that to the VAE setting presented in this post.
+          </p>
+          <p>
+            In the area problem, each sampled point gave us either zero or one.
+            In the VAE, each sampled latent vector gives us a reconstruction
+            loss. In both cases, we average those values to estimate an
+            expectation.
+          </p>
+          <p>
+            After getting the mean and variances from the encoder, we use our
+            Gaussian distribution to sample latent vectors, then compare their
+            decoded reconstructions with the original image. But unfortunately,
+            this decoder involves a complex, nonlinear function, so we generally
+            can’t calculate the expected reconstruction loss analytically.
+          </p>
+          <div class="math-block">
+            \[
+            R_k:=R(x,Z^{(k)})
+            =\frac{1}{d}\sum_{i=1}^{d}
+              \left(x_i-m_{\theta,i}(Z^{(k)})\right)^2.
+            \]
+          </div>
+          <p>Here:</p>
+          <ul>
+            <li>\(x\) is our original image, with \(d\) pixels.</li>
+            <li>\(x_i\) is the value of pixel \(i\).</li>
+            <li>\(Z^{(k)}\) is the \(k\)-th sampled latent vector.</li>
+            <li>
+              \(m_\theta\) is the decoder with parameters \(\theta\), and
+              \(m_{\theta,i}(Z^{(k)})\) is its reconstructed value for pixel
+              \(i\).
+            </li>
+            <li>
+              \(R_k\) is the reconstruction MSE for that latent sample:
+              we average the squared errors across the \(d\) pixels.
+            </li>
+          </ul>
+          <p>For \(K\) latent samples, we then have</p>
+          <div class="math-block">
+            \[
+            \frac{1}{K}\sum_{k=1}^{K}R_k
+            \approx\mathbb{E}_{Z\sim q_\phi(z\mid x)}[R(x,Z)].
+            \]
+          </div>
+          <p>
+            Here, \(q_\phi(z\mid x)\) is the encoder’s distribution over
+            latent vectors for the input image \(x\); \(\phi\) denotes
+            the encoder’s parameters. In our example, it is the Gaussian
+            with mean vector \(\mu_\phi(x)\) and diagonal covariance
+            \(\operatorname{diag}(\sigma_\phi^2(x))\). The expectation
+            averages the reconstruction loss over that distribution. In the
+            earlier iteration, \(K=5\).
+          </p>
+          <p>
+            Keep \(x\), \(\phi\), and \(\theta\) fixed while drawing
+            independent latent samples, and assume the expected reconstruction
+            loss is finite. Then, by the LLN,
+          </p>
+          <div class="math-block">
+            \[
+            \frac{1}{K}\sum_{k=1}^{K}R_k
+            \longrightarrow\mathbb{E}_{Z\sim q_\phi(z\mid x)}[R(x,Z)]
+            \qquad\text{as }K\to\infty.
+            \]
+          </div>
+          <p>
+            Averaging across pixels gives us one reconstruction loss.
+            Averaging across latent samples estimates its expectation for
+            one fixed image. Averaging across images in a randomly sampled
+            mini-batch estimates an average over the data; across training
+            steps, the model itself changes.
+          </p>
+          <p>
+            That is where the VAE meets Monte Carlo: we sample latent vectors,
+            calculate their reconstruction losses, and average them to estimate
+            an expectation we cannot usually compute exactly.
+          </p>
+        </section>
+
+        <section class="post-section">
+          <h2>Open Questions</h2>
+          <ul class="question-list">
+            <li>
+              What’s the effect of batch size on the Monte Carlo estimation?
+            </li>
+            <li>
+              How many samples are “good” for doing the Monte Carlo estimation?
+              How could we know that?
+            </li>
+            <li>
+              Can we tweak the decoder so we can compute the expectation
+              analytically?
+            </li>
+          </ul>
+        </section>
+
+        <section class="post-section">
+          <h2>References</h2>
+          <ul class="references">
+            <li><a href="https://www.youtube.com/watch?v=OprNqnHsVIA">Joe Blitzstein, Stat 110, Lecture 29: Law of Large Numbers and Central Limit Theorem</a></li>
+            <li><a href="https://stat110.hsites.harvard.edu/sites/g/files/omnuum10111/files/stat110/files/strategic_practice_and_homework_11.pdf">Joe Blitzstein, Stat 110, Strategic Practice 11: Law of Large Numbers / Central Limit Theorem, Problem 5</a></li>
+            <li><a href="https://arxiv.org/abs/1312.6114">Diederik P. Kingma and Max Welling: Auto-Encoding Variational Bayes</a></li>
+            <li><a href="https://yann.lecun.com/exdb/mnist/">The MNIST database of handwritten digits</a></li>
+            <li><a href="https://x.com/fchollet/status/2102166631439053014">François Chollet: “Delegate coding. Never delegate understanding.”</a></li>
+            <li><a href="https://en.wikipedia.org/wiki/The_devil_is_in_the_details">Wikipedia: The devil is in the details</a></li>
+          </ul>
+        </section>
+      </article>
+
+      <p class="post-nav"><a href="../writing.html">Back to writing</a></p>
+
+      <footer class="footer">
+        <p>Find me online or get in touch.</p>
+        <div class="links">
+          <a href="https://github.com/juancopi81">GitHub</a>
+          <a href="https://huggingface.co/juancopi81">Hugging Face</a>
+          <a href="https://www.linkedin.com/in/juancarlospinerosp/">LinkedIn</a>
+          <a href="https://x.com/juancopi81">X / Twitter</a>
+          <a href="mailto:juancopi_81@hotmail.com">Email</a>
+        </div>
+      </footer>
+    </main>
+    <script>
+      const monteCarloPlayground = document.querySelector("[data-monte-carlo-playground]");
+      window.addEventListener("message", (event) => {
+        if (
+          !monteCarloPlayground ||
+          event.source !== monteCarloPlayground.contentWindow ||
+          event.origin !== window.location.origin ||
+          event.data?.type !== "monte-carlo:resize"
+        ) return;
+        const height = Number(event.data.height);
+        if (!Number.isFinite(height)) return;
+        monteCarloPlayground.style.minHeight = "0";
+        monteCarloPlayground.style.height = `${Math.max(600, Math.min(height + 2, 4000))}px`;
+      });
+    </script>
+  </body>
+</html>

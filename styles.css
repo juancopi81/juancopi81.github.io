@@ -216,6 +216,7 @@ a {
 }
 
 .post-content {
+  margin-inline: auto;
   max-width: 740px;
 }
 

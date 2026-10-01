@@ -5,8 +5,16 @@
     <link>https://juancopi81.github.io/writing.html</link>
     <description>Research logs, derivations, and tutorials from personal machine learning projects, including an ongoing series rebuilding diffusion models from first principles.</description>
     <language>en-us</language>
-    <lastBuildDate>Thu, 17 Sep 2026 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 01 Oct 2026 00:00:00 +0000</lastBuildDate>
     <atom:link href="https://juancopi81.github.io/feed.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>When the VAE Meets Monte Carlo</title>
+      <link>https://juancopi81.github.io/posts/2026-10-01-when-the-vae-meets-monte-carlo.html</link>
+      <guid isPermaLink="true">https://juancopi81.github.io/posts/2026-10-01-when-the-vae-meets-monte-carlo.html</guid>
+      <pubDate>Thu, 01 Oct 2026 00:00:00 +0000</pubDate>
+      <description>Why averaging sampled reconstruction losses estimates an expectation in a VAE, through the law of large numbers and an indicator-variable approach to integration.</description>
+      <media:thumbnail url="https://juancopi81.github.io/assets/social/2026-10-01-when-the-vae-meets-monte-carlo.png" />
+    </item>
     <item>
       <title>In Search of PCA’s Lost Variance</title>
       <link>https://juancopi81.github.io/posts/2026-09-17-in-search-of-pcas-lost-variance.html</link>
